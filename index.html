@@ -98,16 +98,39 @@
 
   function openLens() { document.getElementById('imageInput').click(); }
   function openAll() { document.querySelectorAll('#siteList button').forEach(btn => btn.click()); }
-  // function openFinalURL(url) { window.open(url, '_blank'); }
+
+  
+  /* ====== PATCH (Quetta強制起動) START ====== */
+
+// 【Old Code（元のコード：STABLEから降格して保護）】
+// function openFinalURL(url) { window.open(url, '_blank'); }
+// function openFinalURL(url) {
+//   var a = document.createElement('a');
+//   a.href = url;
+//   a.target = '_blank';
+//   a.rel = 'noopener noreferrer';
+//   document.body.appendChild(a);
+//   a.click();
+//   document.body.removeChild(a);
+// }
+
+// 【New Code（修正案：Quetta強制起動Intent）】
   function openFinalURL(url) {
+    // 1. URLから "https://" の部分を削る
+    var targetPath = url.replace(/^https?:\/\//, '');
+    
+    // 2. Androidの強制起動呪文（Intent）を構築（Quettaを指定）
+    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
+
+    // 3. 発射
     var a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
+    a.href = intentUrl;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   }
+
+/* ====== PATCH END ====== */
 
 
 function showLensSubmit() {
