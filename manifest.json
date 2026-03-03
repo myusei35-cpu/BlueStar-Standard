@@ -1,8 +1,9 @@
 {
-  "id": "/BlueStar-Standard/", 
   "name": "BlueStar Standard Hub",
   "short_name": "StandardHub",
-  "start_url": "/BlueStar-Standard/",
+  "description": "Research and management tool.",
+  "id": "/BlueStar-Standard/", 
+  "start_url": "/BlueStar-Standard/index.html",
   "scope": "/BlueStar-Standard/",
   "display": "standalone",
   "background_color": "#0f172a",
