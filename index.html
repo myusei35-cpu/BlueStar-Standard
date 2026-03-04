@@ -100,27 +100,34 @@
   function openAll() { document.querySelectorAll('#siteList button').forEach(btn => btn.click()); }
 
   
-  /* ====== PATCH (理想のQuettaポップアップ連動・テスト版) START ====== */
+  /* ====== PATCH (メルカリ本物アプリ直結) START ====== */
 
-// 【Old Code（保護）】
+// 【Old Code（テスト版コードを保護）】
 // function openFinalURL(url) {
+//   alert("最新のQuetta強制パッチが発動しました！"); 
+//   var targetPath = url.replace(/^https?:\/\//, '');
+//   var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
 //   var a = document.createElement('a');
-//   a.href = url;
-//   a.target = '_blank';
-//   a.rel = 'noopener noreferrer';
+//   a.href = intentUrl;
 //   document.body.appendChild(a);
 //   a.click();
 //   document.body.removeChild(a);
 // }
 
-// 【New Code（アラート付きQuetta強制召喚）】
+// 【New Code（メルカリのURLなら本物のアプリを直接起動）】
   function openFinalURL(url) {
-    // ★追加：最新コードが反映されたか確認する目印
-    alert("最新のQuetta強制パッチが発動しました！"); 
-    
     var targetPath = url.replace(/^https?:\/\//, '');
-    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
-    
+    var intentUrl = '';
+
+    // URLの中に「mercari.com」が含まれているか判定
+    if (url.indexOf('mercari.com') !== -1) {
+      // メルカリの場合：本物のメルカリアプリ（com.kouzoh.mercari）を強制召喚！
+      intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=com.kouzoh.mercari;end;';
+    } else {
+      // それ以外（ヤフオクやセカスト等）：通常のシステムに任せる
+      intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
+    }
+
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
