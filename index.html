@@ -100,25 +100,29 @@
   function openAll() { document.querySelectorAll('#siteList button').forEach(btn => btn.click()); }
 
   
-  /* ====== PATCH (Quetta強制起動の解除・STABLE復旧) START ====== */
+  /* ====== PATCH (理想のQuettaポップアップ連動) START ====== */
 
-// 【Old Code（無反応の原因となったQuetta強制パッチ：無効化）】
+// 【Old Code（現在のSTABLEコードをコメントアウトして保護）】
 // function openFinalURL(url) {
-//   var targetPath = url.replace(/^https?:\/\//, '');
-//   var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
 //   var a = document.createElement('a');
-//   a.href = intentUrl;
+//   a.href = url;
+//   a.target = '_blank';
+//   a.rel = 'noopener noreferrer';
 //   document.body.appendChild(a);
 //   a.click();
 //   document.body.removeChild(a);
 // }
 
-// 【New Code（元のSTABLEコードへの復旧：Androidシステム標準に選択させる）】
+// 【New Code（Chrome PWAからQuettaへ完璧なパスを出す）】
   function openFinalURL(url) {
+    var targetPath = url.replace(/^https?:\/\//, '');
+    
+    // package=net.quetta.browser を指定してQuettaを強制召喚
+    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
+    
+    // _blank（新規タブ）による真っ黒バグを防ぐため、aタグで安全に発射
     var a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
+    a.href = intentUrl;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
