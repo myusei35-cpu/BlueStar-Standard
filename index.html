@@ -50,28 +50,23 @@
   <span onclick="document.getElementById('keyword').value=''" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 14px;">❌</span>
 </div>
 
-      <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
-     
+      <input type="file" id="imageInput" accept="image/*" capture="environment" style="display:none;" onchange="showLensSubmit()">
+      
       <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-size:14px; font-weight:bold; cursor:pointer; white-space:nowrap;" onclick="finalLensSubmit()">
         レンズ連携
       </button>
 
       <button class="btn-generate" id="generateBtn" onclick="generateLinks()" style="white-space:nowrap;">生成</button>
-     
+      
     </div>
-
-
 
     <div class="alert" id="alert"></div>
-   
+    
     <div class="control-row">
-      <button class="btn-lens" onclick="openLens()">📷カメラ/レンズ</button>
+      <button class="btn-lens" onclick="openLens()">📸 直接カメラ</button>
       <button class="btn-all" onclick="openAll()">全サイトを一括で開く</button>
-      <button id="geminiToggle" class="btn-gemini" onclick="toggleGemini()">Geminiモード：OFF</button>
+      <button class="btn-gemini" onclick="launchNativeLens()" style="background-color: #ea4335; color: #fff;">🔍 レンズ起動</button>
     </div>
-   
-    <div class="site-list" id="siteList"></div>
-  </div>
 
 <script>
   /* ====== STABLE (安定拡張) START ====== */
@@ -259,6 +254,22 @@ function finalLensSubmit() {
     });
   });
   /* ====== STABLE END ====== */
+
+  /* ====== PATCH (本物レンズアプリ起動機能) START ====== */
+
+  // 新規追加：Androidシステムに本物のGoogle Lensアプリを強制起動させる
+  function launchNativeLens() {
+    // Google Lensのパッケージ（com.google.ar.lens）を直接指定
+    var intentUrl = 'intent://#Intent;package=com.google.ar.lens;end;';
+    
+    var a = document.createElement('a');
+    a.href = intentUrl;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+/* ====== PATCH END ====== */
 </script>
 </body>
 </html>
