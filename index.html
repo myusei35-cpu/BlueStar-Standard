@@ -100,31 +100,25 @@
   function openAll() { document.querySelectorAll('#siteList button').forEach(btn => btn.click()); }
 
   
-  /* ====== PATCH (Quetta強制起動) START ====== */
+  /* ====== PATCH (Quetta強制起動の解除・STABLE復旧) START ====== */
 
-// 【Old Code（元のコード：STABLEから降格して保護）】
-// function openFinalURL(url) { window.open(url, '_blank'); }
+// 【Old Code（無反応の原因となったQuetta強制パッチ：無効化）】
 // function openFinalURL(url) {
+//   var targetPath = url.replace(/^https?:\/\//, '');
+//   var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
 //   var a = document.createElement('a');
-//   a.href = url;
-//   a.target = '_blank';
-//   a.rel = 'noopener noreferrer';
+//   a.href = intentUrl;
 //   document.body.appendChild(a);
 //   a.click();
 //   document.body.removeChild(a);
 // }
 
-// 【New Code（修正案：Quetta強制起動Intent）】
+// 【New Code（元のSTABLEコードへの復旧：Androidシステム標準に選択させる）】
   function openFinalURL(url) {
-    // 1. URLから "https://" の部分を削る
-    var targetPath = url.replace(/^https?:\/\//, '');
-    
-    // 2. Androidの強制起動呪文（Intent）を構築（Quettaを指定）
-    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
-
-    // 3. 発射
     var a = document.createElement('a');
-    a.href = intentUrl;
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
