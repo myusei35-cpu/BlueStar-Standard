@@ -5,21 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>★ 予測検索テスト（本番環境とは完全に独立）</title>
   <style>
+    /* ====== FROZEN (UI・スタイル領域：完成済み) ====== */
     body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
     .header { text-align: center; margin-bottom: 20px; }
     .header h3 { color: #f59e0b; margin: 0 0 5px 0; }
     .header p { font-size: 12px; color: #94a3b8; margin: 0; }
     
-    /* 検索窓とサジェストを包む枠 */
     .input-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
     
-    /* 検索窓（▼が出ないように設定済み） */
     input[type="text"] { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #334155; background-color: #1e293b; color: #fff; font-size: 16px; outline: none; box-sizing: border-box; }
     
-    /* サジェストの窓（入力欄の真下に固定） */
     .suggestion-box { position: absolute; top: 100%; left: 0; width: 100%; max-height: 250px; overflow-y: auto; background-color: #1e293b; border: 1px solid #475569; border-top: none; border-radius: 0 0 8px 8px; z-index: 9999; display: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
     
-    /* サジェストの各ブランド名（スマホで押しやすいサイズ） */
     .suggestion-item { padding: 16px 15px; border-bottom: 1px solid #334155; color: #f8fafc; font-size: 16px; font-weight: bold; cursor: pointer; }
     .suggestion-item:active { background-color: #334155; }
   </style>
@@ -38,56 +35,16 @@
 
   <p style="font-size: 14px; margin-top: 30px; color: #cbd5e1;">
     【テスト方法】<br>
-    「ば」または「B」と入力してください。入力欄のすぐ下に、キーボードに邪魔されず縦に候補が表示されます。
+    「ば」と打つと「バーバリー」などカタカナのみが出ます。<br>
+    「b」と打つと「BURBERRY」などアルファベットのみが出ます。
   </p>
 
   <script>
+    /* ====== FROZEN (要素取得とUI制御: 完全に仕上がった聖域) ====== */
     const inputField = document.getElementById('testKeyword');
     const suggestionBox = document.getElementById('suggestionBox');
 
-    // テスト用のブランドデータ（動作確認後、2万件の利益辞書に差し替えます）
-    const testBrands = [
-      "BURBERRY (バーバリー)",
-      "BALENCIAGA (バレンシアガ)",
-      "BALLY (バリー)",
-      "BARNEYS NEWYORK",
-      "BEAMS",
-      "BOTTEGA VENETA",
-      "BVLGARI"
-    ];
-
-    // 文字が入力されるたびに動く処理
-    inputField.addEventListener('input', function() {
-      const val = this.value.toLowerCase();
-      suggestionBox.innerHTML = ''; 
-
-      if (!val) {
-        suggestionBox.style.display = 'none';
-        return;
-      }
-
-      const matches = testBrands.filter(b => b.toLowerCase().includes(val));
-
-      if (matches.length > 0) {
-        matches.forEach(brand => {
-          const div = document.createElement('div');
-          div.className = 'suggestion-item';
-          div.textContent = brand;
-          
-          // タップした時の処理
-          div.onclick = function() {
-            inputField.value = brand; 
-            suggestionBox.style.display = 'none'; 
-          };
-          suggestionBox.appendChild(div);
-        });
-        suggestionBox.style.display = 'block'; 
-      } else {
-        suggestionBox.style.display = 'none'; 
-      }
-    });
-
-    // 画面のどこかを触ったらサジェストを閉じる（誤動作防止）
+    // 画面外タップで閉じる処理（誤動作防止）
     document.addEventListener('touchstart', function(e) {
       if (e.target !== inputField && !suggestionBox.contains(e.target)) {
         suggestionBox.style.display = 'none';
@@ -98,6 +55,77 @@
         suggestionBox.style.display = 'none';
       }
     });
+
+
+    /* ====== STABLE (基本機能・データ構造: エラーなく正常動作する基準) ====== */
+    // 【棲み分け辞書】英語とカタカナを完全に分離して管理
+    const brandDictionary = [
+      { en: "BURBERRY", kana: "バーバリー" },
+      { en: "BALENCIAGA", kana: "バレンシアガ" },
+      { en: "BALLY", kana: "バリー" },
+      { en: "BARNEYS NEWYORK", kana: "バーニーズニューヨーク" },
+      { en: "BEAMS", kana: "ビームス" },
+      { en: "BOTTEGA VENETA", kana: "ボッテガヴェネタ" },
+      { en: "BVLGARI", kana: "ブルガリ" }
+    ];
+
+    // 【変換ツール】ひらがなをカタカナに変換する機能
+    function hiraToKata(str) {
+      return str.replace(/[\u3041-\u3096]/g, function(match) {
+        var chr = match.charCodeAt(0) + 0x60;
+        return String.fromCharCode(chr);
+      });
+    }
+
+
+    /* ====== PATCH (棲み分け検索ロジック: 今回の修正・テストエリア) ====== */
+    // 前回のテストコード（英語・カタカナ混在ロジック）から完全に置き換わっています
+    inputField.addEventListener('input', function() {
+      const val = this.value;
+      suggestionBox.innerHTML = ''; 
+
+      if (!val) {
+        suggestionBox.style.display = 'none';
+        return;
+      }
+
+      // 【棲み分け判定】打たれた文字がアルファベットか、日本語かを判定
+      const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
+      let matches = [];
+
+      if (isEnglishInput) {
+        // ▼ アルファベット入力時：英語辞書から探し、英語のみを抽出
+        const lowerVal = val.toLowerCase();
+        matches = brandDictionary
+          .filter(b => b.en.toLowerCase().includes(lowerVal))
+          .map(b => b.en); 
+      } else {
+        // ▼ 日本語入力時：カタカナに変換して探し、カタカナのみを抽出
+        const kataVal = hiraToKata(val);
+        matches = brandDictionary
+          .filter(b => b.kana.includes(kataVal))
+          .map(b => b.kana); 
+      }
+
+      // 画面表示処理
+      if (matches.length > 0) {
+        matches.forEach(brandName => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.textContent = brandName; // ここには英語かカタカナのどちらかしか入らない
+          
+          div.onclick = function() {
+            inputField.value = brandName; 
+            suggestionBox.style.display = 'none'; 
+          };
+          suggestionBox.appendChild(div);
+        });
+        suggestionBox.style.display = 'block'; 
+      } else {
+        suggestionBox.style.display = 'none'; 
+      }
+    });
+    /* ====== PATCH END ====== */
   </script>
 </body>
 </html>
