@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>予測検索 テスト</title>
+  <style>
+    /* テスト用の簡易スタイル */
+    body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; padding: 20px; }
+    .container { max-width: 640px; margin: 0 auto; }
+    h3 { color: #f59e0b; }
+    .input-wrapper { position: relative; margin-top: 20px; }
+    input[type="text"] { 
+      width: 100%; padding: 15px; font-size: 16px; 
+      border-radius: 8px; border: none; background-color: #334155; color: #fff; box-sizing: border-box;
+    }
+    .note { margin-top: 15px; font-size: 0.9em; color: #94a3b8; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>★ 予測検索テスト（本番環境とは完全に独立）</h3>
+    
+    <div class="input-wrapper">
+      <input type="text" id="testKeyword" list="brandList" placeholder="ブランド名を入力（例：ば、さ、の）">
+    </div>
+    
+    <datalist id="brandList"></datalist>
+
+    <div class="note">
+      【テスト方法】<br>
+      「ば」と入力してみてください。バーバリーやバレンシアガが瞬時にキーボードの候補として表示されます。<br>
+      ※この軽快さが確認できたら、お預かりしたCSV（2万件）から抽出した本格的な辞書と入れ替えます。
+    </div>
+  </div>
+
+  <script>
+    // 動作スピードを体感するための「テスト用・精鋭辞書」
+    const testBrands = [
+      "BURBERRY (バーバリー)", "BALENCIAGA (バレンシアガ)", "BOTTEGA VENETA (ボッテガヴェネタ)",
+      "COMOLI (コモリ)", "CELINE (セリーヌ)", "CHANEL (シャネル)",
+      "GUCCI (グッチ)", "GIVENCHY (ジバンシィ)",
+      "HERMES (エルメス)", "HYKE (ハイク)",
+      "LOEWE (ロエベ)", "LOUIS VUITTON (ルイ・ヴィトン)",
+      "Maison Margiela (メゾンマルジェラ)", "MONCLER (モンクレール)",
+      "PRADA (プラダ)", "patagonia (パタゴニア)",
+      "Supreme (シュプリーム)", "sacai (サカイ)",
+      "THE NORTH FACE (ノースフェイス)", "TATRAS (タトラス)"
+    ];
+
+    // 画面が開いた瞬間に、辞書の文字データをスマホのメモリに読み込ませる
+    window.addEventListener('DOMContentLoaded', function() {
+      var dataList = document.getElementById('brandList');
+      testBrands.forEach(function(brand) {
+        var option = document.createElement('option');
+        option.value = brand;
+        dataList.appendChild(option);
+      });
+    });
+  </script>
+</body>
+</html>
