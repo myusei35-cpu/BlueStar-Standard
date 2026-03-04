@@ -11,29 +11,25 @@
   <title>BlueStar Research Hub</title>
 
   <style>
-    /* ====== FROZEN (触らない) START ====== */
-    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; }
+    /* ====== FROZEN (スタイル保護) ====== */
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: #0f172a; color: #f8fafc; }
     .header { background-color: #1e293b; padding: 15px; text-align: center; font-size: 1.4em; font-weight: bold; }
     .header span.star { color: #f59e0b; margin-right: 6px; }
     .container { max-width: 640px; margin: 20px auto; padding: 0 20px; }
-    .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
+    .input-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
     .input-row input[type="text"] { flex-grow: 1; padding: 12px 14px; border: none; border-radius: 6px; background-color: #334155; color: #f8fafc; font-size: 1em; outline: none; }
-    .input-row button.btn-generate { background-color: #dc2626; color: #ffffff; border: none; border-radius: 6px; padding: 12px 16px; font-weight: bold; cursor: pointer; }
+    .btn-generate { background-color: #dc2626; color: #ffffff; border: none; border-radius: 6px; padding: 12px 16px; font-weight: bold; cursor: pointer; }
     .control-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .control-row button { flex: 1; min-width: 120px; padding: 12px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #ffffff; }
     .btn-lens { background-color: #475569; }
     .btn-camera { background-color: #059669; }
     .btn-all { background-color: #475569; }
     .btn-gemini { background-color: #7c3aed; }
-    .btn-gemini.on { background-color: #6b21a8; }
     .alert { color: #f87171; margin-bottom: 15px; display: none; }
-    .site-list { margin-top: 10px; }
     .site-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .site-info { display: flex; flex-direction: column; }
-    .site-info .title { font-weight: bold; margin-bottom: 4px; font-size: 1em; }
+    .site-info .title { font-weight: bold; margin-bottom: 4px; }
     .site-info .desc { font-size: 0.82em; color: #94a3b8; }
-    .site-card button { background-color: #2563eb; border: none; border-radius: 6px; padding: 8px 14px; color: #ffffff; font-weight: bold; cursor: pointer; font-size: 0.9em; }
-    /* ====== FROZEN END ====== */
+    .site-card button { background-color: #2563eb; border: none; border-radius: 6px; padding: 8px 14px; color: #ffffff; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -41,11 +37,15 @@
   <div class="container">
     <div class="input-row">
       <div style="position: relative; flex: 1; display: flex;">
-        <input id="keyword" type="text" placeholder="キーワードを入力" style="width: 100%; padding-right: 30px;" />
+        <input id="keyword" type="text" placeholder="キーワードを入力" />
         <span onclick="document.getElementById('keyword').value=''" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;">❌</span>
       </div>
+      
       <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
-      <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold;" onclick="finalLensSubmit()">レンズ連携</button>
+      <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
+        レンズ連携
+      </button>
+
       <button class="btn-generate" onclick="generateLinks()">生成</button>
     </div>
 
@@ -63,9 +63,10 @@
   </div>
 
 <script>
-  /* ====== STABLE (安定版プログラム) ====== */
+  /* ====== STABLE (完全統合版プログラム) ====== */
   var geminiMode = false;
 
+  // Geminiモード切替
   function toggleGemini() {
     geminiMode = !geminiMode;
     var btn = document.getElementById('geminiToggle');
@@ -73,18 +74,21 @@
     btn.classList.toggle('on', geminiMode);
   }
 
+  // 画像選択（アルバム）
   function openGallery() {
     var input = document.getElementById('imageInput');
     input.removeAttribute('capture');
     input.click();
   }
 
+  // 直接カメラ（広角対応）
   function openCamera() {
     var input = document.getElementById('imageInput');
     input.setAttribute('capture', 'environment');
     input.click();
   }
 
+  // 本物のレンズアプリを直接起動
   function launchNativeLens() {
     var intentUrl = 'intent://#Intent;action=android.intent.action.VIEW;component=com.google.android.googlequicksearchbox/com.google.android.apps.search.lens.LensActivity;end;';
     var a = document.createElement('a');
@@ -94,6 +98,7 @@
     document.body.removeChild(a);
   }
 
+  // メルカリ本物アプリ直結
   function openFinalURL(url) {
     var targetPath = url.replace(/^https?:\/\//, '');
     var intentUrl = (url.indexOf('mercari.com') !== -1) 
@@ -106,39 +111,50 @@
     document.body.removeChild(a);
   }
 
+  /* --- 【復活】レンズ連携コアロジック --- */
   function showLensSubmit() {
     var fileInput = document.getElementById('imageInput');
-    document.getElementById('lensSubmitBtn').style.display = (fileInput.files.length > 0) ? 'inline-block' : 'none';
+    if (fileInput.files && fileInput.files[0]) {
+      document.getElementById('lensSubmitBtn').style.display = 'inline-block';
+    }
   }
 
   function finalLensSubmit() {
     var fileInput = document.getElementById('imageInput');
     var keyword = document.getElementById('keyword').value.trim();
-    if (!fileInput.files[0]) return;
+    if (!fileInput.files || !fileInput.files[0]) return;
+
     var searchKw = keyword ? keyword + " メルカリ" : "メルカリ";
     var newWin = window.open('', '_blank');
     if (!newWin) return alert('ポップアップを許可してください');
+
     var doc = newWin.document;
     doc.open();
     doc.write('<html><head><meta name="referrer" content="no-referrer"></head><body><p>Lens転送中...</p></body></html>');
     doc.close();
+
     var form = doc.createElement('form');
     form.method = 'POST';
     form.action = 'https://lens.google.com/upload?ep=gisbubu&hl=ja&q=' + encodeURIComponent(searchKw);
     form.enctype = 'multipart/form-data';
+
     var dataInput = doc.createElement('input');
     dataInput.type = 'file';
     dataInput.name = 'encoded_image';
+    
     var container = new DataTransfer();
     container.items.add(fileInput.files[0]);
     dataInput.files = container.files;
+
     form.appendChild(dataInput);
     doc.body.appendChild(form);
     form.submit();
+
     document.getElementById('lensSubmitBtn').style.display = 'none';
     fileInput.value = '';
   }
 
+  // リンク生成
   function generateLinks() {
     var keyword = document.getElementById('keyword').value.trim();
     var alertEl = document.getElementById('alert');
@@ -166,7 +182,7 @@
       listEl.appendChild(card);
     });
     if (geminiMode) {
-      var prompt = 'あなたはプロの物販セラーです。最新の相場を検索して報告してください。回答はテンプレートを遵守してください。商品名：' + keyword;
+      var prompt = 'あなたはプロの物販セラーです。最新の相場を検索して報告してください。回答は必ず指定のテンプレートを遵守してください。\n商品名：' + keyword;
       openFinalURL('https://gemini.google.com/app?q=' + encodeURIComponent(prompt));
     }
   }
@@ -178,6 +194,7 @@
     var kw = params.get('keyword');
     if (kw) { document.getElementById('keyword').value = decodeURIComponent(kw); }
 
+    // クリップボードからの画像ペースト対応
     document.addEventListener('paste', function(e) {
       if (!e.clipboardData || !e.clipboardData.items) return;
       var items = e.clipboardData.items;
