@@ -1,175 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>予測検索 テスト</title>
+  <title>★ 予測検索テスト（本番環境とは完全に独立）</title>
   <style>
-    /* テスト用の簡易スタイル */
-    body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-    .container { max-width: 640px; margin: 0 auto; }
-    h3 { color: #f59e0b; }
-    .input-wrapper { position: relative; margin-top: 20px; }
-    input[type="text"] { 
-      width: 100%; padding: 15px; font-size: 16px; 
-      border-radius: 8px; border: none; background-color: #334155; color: #fff; box-sizing: border-box;
-    }
-    .note { margin-top: 15px; font-size: 0.9em; color: #94a3b8; line-height: 1.5; }
+    body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h3 { color: #f59e0b; margin: 0 0 5px 0; }
+    .header p { font-size: 12px; color: #94a3b8; margin: 0; }
+    
+    /* 検索窓とサジェストを包む枠 */
+    .input-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
+    
+    /* 検索窓（▼が出ないように設定済み） */
+    input[type="text"] { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #334155; background-color: #1e293b; color: #fff; font-size: 16px; outline: none; box-sizing: border-box; }
+    
+    /* サジェストの窓（入力欄の真下に固定） */
+    .suggestion-box { position: absolute; top: 100%; left: 0; width: 100%; max-height: 250px; overflow-y: auto; background-color: #1e293b; border: 1px solid #475569; border-top: none; border-radius: 0 0 8px 8px; z-index: 9999; display: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
+    
+    /* サジェストの各ブランド名（スマホで押しやすいサイズ） */
+    .suggestion-item { padding: 16px 15px; border-bottom: 1px solid #334155; color: #f8fafc; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .suggestion-item:active { background-color: #334155; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h3>★ 予測検索テスト（本番環境とは完全に独立）</h3>
-    
-    // <div class="input-wrapper">
-      // <input type="text" id="testKeyword" list="brandList" placeholder="ブランド名を入力（例：ば、さ、の）">
-    // </div>
 
-    <div class="input-wrapper">
-  <input type="text" id="testKeyword" autocomplete="off" placeholder="ブランド名を入力（例：ば、さ、の）">
-</div>
-    
-    <datalist id="brandList"></datalist>
-
-    <div class="note">
-      【テスト方法】<br>
-      「ば」と入力してみてください。バーバリーやバレンシアガが瞬時にキーボードの候補として表示されます。<br>
-      ※この軽快さが確認できたら、お預かりしたCSV（2万件）から抽出した本格的な辞書と入れ替えます。
-    </div>
+  <div class="header">
+    <h3>★ 予測検索テスト</h3>
+    <p>本番環境(index.html)とは完全に独立しています</p>
   </div>
 
+  <div class="input-container">
+    <input type="text" id="testKeyword" placeholder="ブランド名を入力（例：ば）" autocomplete="off">
+    <div id="suggestionBox" class="suggestion-box"></div>
+  </div>
+
+  <p style="font-size: 14px; margin-top: 30px; color: #cbd5e1;">
+    【テスト方法】<br>
+    「ば」または「B」と入力してください。入力欄のすぐ下に、キーボードに邪魔されず縦に候補が表示されます。
+  </p>
+
   <script>
-    // 動作スピードを体感するための「テスト用・精鋭辞書」
+    const inputField = document.getElementById('testKeyword');
+    const suggestionBox = document.getElementById('suggestionBox');
+
+    // テスト用のブランドデータ（動作確認後、2万件の利益辞書に差し替えます）
     const testBrands = [
-      "BURBERRY (バーバリー)", "BALENCIAGA (バレンシアガ)", "BOTTEGA VENETA (ボッテガヴェネタ)",
-      "COMOLI (コモリ)", "CELINE (セリーヌ)", "CHANEL (シャネル)",
-      "GUCCI (グッチ)", "GIVENCHY (ジバンシィ)",
-      "HERMES (エルメス)", "HYKE (ハイク)",
-      "LOEWE (ロエベ)", "LOUIS VUITTON (ルイ・ヴィトン)",
-      "Maison Margiela (メゾンマルジェラ)", "MONCLER (モンクレール)",
-      "PRADA (プラダ)", "patagonia (パタゴニア)",
-      "Supreme (シュプリーム)", "sacai (サカイ)",
-      "THE NORTH FACE (ノースフェイス)", "TATRAS (タトラス)"
+      "BURBERRY (バーバリー)",
+      "BALENCIAGA (バレンシアガ)",
+      "BALLY (バリー)",
+      "BARNEYS NEWYORK",
+      "BEAMS",
+      "BOTTEGA VENETA",
+      "BVLGARI"
     ];
 
-    // 画面が開いた瞬間に、辞書の文字データをスマホのメモリに読み込ませる
-    window.addEventListener('DOMContentLoaded', function() {
-      var dataList = document.getElementById('brandList');
-      testBrands.forEach(function(brand) {
-        var option = document.createElement('option');
-        option.value = brand;
-        dataList.appendChild(option);
-      });
+    // 文字が入力されるたびに動く処理
+    inputField.addEventListener('input', function() {
+      const val = this.value.toLowerCase();
+      suggestionBox.innerHTML = ''; 
+
+      if (!val) {
+        suggestionBox.style.display = 'none';
+        return;
+      }
+
+      const matches = testBrands.filter(b => b.toLowerCase().includes(val));
+
+      if (matches.length > 0) {
+        matches.forEach(brand => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.textContent = brand;
+          
+          // タップした時の処理
+          div.onclick = function() {
+            inputField.value = brand; 
+            suggestionBox.style.display = 'none'; 
+          };
+          suggestionBox.appendChild(div);
+        });
+        suggestionBox.style.display = 'block'; 
+      } else {
+        suggestionBox.style.display = 'none'; 
+      }
     });
 
-    /* ====== PATCH (メルカリ式：縦型サジェスト追加) START ====== */
-
-// 1. サジェストを表示するための「専用の窓」を作ります
-const suggestionBox = document.createElement('div');
-suggestionBox.id = 'suggestion-box';
-// スマホで入力欄のすぐ真下に出るように設定
-suggestionBox.style = "position:absolute; background:#1e293b; border:1px solid #334155; width:100%; max-height:250px; overflow-y:auto; z-index:1000; border-radius:0 0 8px 8px; display:none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);";
-
-const inputField = document.getElementById('keyword');
-// 入力欄の親要素にドッキング
-inputField.parentNode.style.position = 'relative'; 
-inputField.parentNode.appendChild(suggestionBox);
-
-// 2. 文字を打つたびに候補を探して表示する処理
-inputField.addEventListener('input', function() {
-    const val = this.value.toLowerCase();
-    suggestionBox.innerHTML = ''; 
-    
-    if (!val) {
+    // 画面のどこかを触ったらサジェストを閉じる（誤動作防止）
+    document.addEventListener('touchstart', function(e) {
+      if (e.target !== inputField && !suggestionBox.contains(e.target)) {
         suggestionBox.style.display = 'none';
-        return;
-    }
-
-    // ★ ここに後ほど「2万件のブランド」を流し込みます。現在はテスト用です。
-    const testBrands = ["BURBERRY (バーバリー)", "BALENCIAGA (バレンシアガ)", "BALLY (バリー)", "BARNEYS NEWYORK", "BEAMS", "BOTTEGA VENETA"];
-    const matches = testBrands.filter(b => b.toLowerCase().includes(val));
-
-    if (matches.length > 0) {
-        matches.forEach(brand => {
-            const div = document.createElement('div');
-            div.textContent = brand;
-            div.style = "padding:14px 12px; border-bottom:1px solid #334155; cursor:pointer; color:#f8fafc; font-weight:bold; font-size:16px;";
-            
-            div.onclick = function() {
-                inputField.value = brand; 
-                suggestionBox.style.display = 'none'; 
-            };
-            suggestionBox.appendChild(div);
-        });
-        suggestionBox.style.display = 'block'; 
-    } else {
-        suggestionBox.style.display = 'none'; 
-    }
-});
-
-// 3. 入力欄以外をタップしたら閉じる
-document.addEventListener('click', function(e) {
-    if (e.target !== inputField) suggestionBox.style.display = 'none';
-});
-
-/* ====== PATCH END ====== */
-
-    /* ====== PATCH 2 (テスト用：縦型サジェスト追加) START ====== */
-
-// 【Old Code（もし古いテスト用JSがあればコメントアウトで保護）】
-
-// 【New Code（</script>の直前に追加）】
-
-// 1. サジェストを表示するための「専用の窓」を作成
-const suggestionBox = document.createElement('div');
-suggestionBox.id = 'suggestion-box';
-suggestionBox.style = "position:absolute; background:#1e293b; border:1px solid #475569; width:100%; max-height:300px; overflow-y:auto; z-index:2000; border-radius:0 0 8px 8px; display:none; box-shadow: 0 10px 25px rgba(0,0,0,0.6);";
-
-// ★対象をメインの 'keyword' ではなくテスト用の 'testKeyword' に指定
-const inputField = document.getElementById('testKeyword');
-inputField.parentNode.style.position = 'relative'; 
-inputField.parentNode.appendChild(suggestionBox);
-
-// 2. 入力に合わせて候補を探す処理
-inputField.addEventListener('input', function() {
-    const val = this.value.toLowerCase();
-    suggestionBox.innerHTML = ''; 
-    
-    if (!val) {
+      }
+    });
+    document.addEventListener('click', function(e) {
+      if (e.target !== inputField && !suggestionBox.contains(e.target)) {
         suggestionBox.style.display = 'none';
-        return;
-    }
-
-    // ★ 辞書データ（後ほど2万件をここに統合します）
-    const testBrands = ["BURBERRY (バーバリー)", "BALENCIAGA (バレンシアガ)", "BALLY (バリー)", "BARNEYS NEWYORK", "BEAMS", "BOTTEGA VENETA", "BVLGARI"];
-    const matches = testBrands.filter(b => b.toLowerCase().includes(val));
-
-    if (matches.length > 0) {
-        matches.forEach(brand => {
-            const div = document.createElement('div');
-            div.textContent = brand;
-            div.style = "padding:16px 14px; border-bottom:1px solid #334155; cursor:pointer; color:#f8fafc; font-weight:bold; font-size:16px;";
-            
-            div.onclick = function() {
-                inputField.value = brand; 
-                suggestionBox.style.display = 'none'; 
-            };
-            suggestionBox.appendChild(div);
-        });
-        suggestionBox.style.display = 'block'; 
-    } else {
-        suggestionBox.style.display = 'none'; 
-    }
-});
-
-// 3. 窓の外をタップしたら閉じる
-document.addEventListener('touchstart', function(e) {
-    if (e.target !== inputField && !suggestionBox.contains(e.target)) {
-        suggestionBox.style.display = 'none';
-    }
-});
-
-/* ====== PATCH 2 END ====== */
+      }
+    });
   </script>
 </body>
 </html>
