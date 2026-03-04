@@ -57,6 +57,58 @@
         dataList.appendChild(option);
       });
     });
+
+    /* ====== PATCH (メルカリ式：縦型サジェスト追加) START ====== */
+
+// 1. サジェストを表示するための「専用の窓」を作ります
+const suggestionBox = document.createElement('div');
+suggestionBox.id = 'suggestion-box';
+// スマホで入力欄のすぐ真下に出るように設定
+suggestionBox.style = "position:absolute; background:#1e293b; border:1px solid #334155; width:100%; max-height:250px; overflow-y:auto; z-index:1000; border-radius:0 0 8px 8px; display:none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);";
+
+const inputField = document.getElementById('keyword');
+// 入力欄の親要素にドッキング
+inputField.parentNode.style.position = 'relative'; 
+inputField.parentNode.appendChild(suggestionBox);
+
+// 2. 文字を打つたびに候補を探して表示する処理
+inputField.addEventListener('input', function() {
+    const val = this.value.toLowerCase();
+    suggestionBox.innerHTML = ''; 
+    
+    if (!val) {
+        suggestionBox.style.display = 'none';
+        return;
+    }
+
+    // ★ ここに後ほど「2万件のブランド」を流し込みます。現在はテスト用です。
+    const testBrands = ["BURBERRY (バーバリー)", "BALENCIAGA (バレンシアガ)", "BALLY (バリー)", "BARNEYS NEWYORK", "BEAMS", "BOTTEGA VENETA"];
+    const matches = testBrands.filter(b => b.toLowerCase().includes(val));
+
+    if (matches.length > 0) {
+        matches.forEach(brand => {
+            const div = document.createElement('div');
+            div.textContent = brand;
+            div.style = "padding:14px 12px; border-bottom:1px solid #334155; cursor:pointer; color:#f8fafc; font-weight:bold; font-size:16px;";
+            
+            div.onclick = function() {
+                inputField.value = brand; 
+                suggestionBox.style.display = 'none'; 
+            };
+            suggestionBox.appendChild(div);
+        });
+        suggestionBox.style.display = 'block'; 
+    } else {
+        suggestionBox.style.display = 'none'; 
+    }
+});
+
+// 3. 入力欄以外をタップしたら閉じる
+document.addEventListener('click', function(e) {
+    if (e.target !== inputField) suggestionBox.style.display = 'none';
+});
+
+/* ====== PATCH END ====== */
   </script>
 </body>
 </html>
