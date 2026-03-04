@@ -88,15 +88,46 @@
     input.click();
   }
 
-  // 本物のレンズアプリを直接起動
+  /* ====== PATCH (レンズ起動修正 ＆ ボタン有効化) START ====== */
+
+// 【Old Code：不具合があった箇所（保護）】
+// function launchNativeLens() {
+//   var intentUrl = 'intent://#Intent;action=android.intent.action.VIEW;component=com.google.android.googlequicksearchbox/com.google.android.apps.search.lens.LensActivity;end;';
+//   var a = document.createElement('a');
+//   a.href = intentUrl;
+//   document.body.appendChild(a);
+//   a.click();
+//   document.body.removeChild(a);
+// }
+
+// 【New Code：本物レンズの確実な起動 ＋ カメラ・画像選択の追加】
+
+  // 1. 本物のレンズアプリを直接起動（Playストア行きを防止）
   function launchNativeLens() {
-    var intentUrl = 'intent://#Intent;action=android.intent.action.VIEW;component=com.google.android.googlequicksearchbox/com.google.android.apps.search.lens.LensActivity;end;';
+    // 汎用性の高い「レンズ検索」の専用命令に更新
+    var intentUrl = 'intent://#Intent;action=google.lens.intent.action.NEW_SEARCH;package=com.google.ar.lens;end;';
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   }
+
+  // 2. 「画像選択（アルバム）」ボタンを動かす命令
+  function openGallery() {
+    var input = document.getElementById('imageInput');
+    input.removeAttribute('capture'); // アルバムモード
+    input.click();
+  }
+
+  // 3. 「カメラ」ボタンを動かす命令
+  function openCamera() {
+    var input = document.getElementById('imageInput');
+    input.setAttribute('capture', 'environment'); // 直接カメラ起動
+    input.click();
+  }
+
+/* ====== PATCH END ====== */
 
   // メルカリ本物アプリ直結
   function openFinalURL(url) {
