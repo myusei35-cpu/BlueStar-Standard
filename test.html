@@ -57,24 +57,7 @@
     });
 
 
-    /* ====== STABLE (基本機能・データ構造: エラーなく正常動作する基準) ====== */
-    
-    // ▼▼▼ 【Old Code（これまでの手打ちテスト辞書：安全のために // で保護）】 ▼▼▼
-    // const brandDictionary = [
-    //   { en: "ADIDAS", kana: "アディダス" },
-    //   { en: "AGNES B", kana: "アニエスベー" },
-    //   { en: "BURBERRY", kana: "バーバリー" },
-    //   { en: "BALENCIAGA", kana: "バレンシアガ" },
-    //   { en: "BALLY", kana: "バリー" },
-    //   { en: "BARNEYS NEWYORK", kana: "バーニーズニューヨーク" },
-    //   { en: "BEAMS", kana: "ビームス" },
-    //   { en: "BOTTEGA VENETA", kana: "ボッテガヴェネタ" },
-    //   { en: "BVLGARI", kana: "ブルガリ" },
-    //   { en: "CELINE", kana: "セリーヌ" },
-    //   { en: "CHANEL", kana: "シャネル" }
-    // ];
-
-    // ▼▼▼ 【New Code（ご提示いただいた2万件CSV自動読み込みコード）】 ▼▼▼
+    /* ====== PATCH (CSV読み込み修正テスト: STABLEから降格) ====== */
     let brandDictionary = []; 
 
     fetch('brand.csv')
@@ -84,8 +67,17 @@
         lines.forEach(line => {
           if (!line.trim()) return;
           const cols = line.split(','); 
-          const nameEn = cols[0] ? cols[0].replace(/"/g, '').trim() : "";
-          const nameKana = cols[1] ? cols[1].replace(/"/g, '').trim() : "";
+          
+          // ▼▼▼ 今回の修正箇所（Old/New分離） ▼▼▼
+          // 【Old Code（A列・B列を見ていた＆全角スペースに無防備だった）】
+          // const nameEn = cols[0] ? cols[0].replace(/"/g, '').trim() : "";
+          // const nameKana = cols[1] ? cols[1].replace(/"/g, '').trim() : "";
+          
+          // 【New Code（B列・C列を正確に狙撃し、前後の全角・半角スペースを完全破壊）】
+          // ※プログラムの世界ではA列=0、B列=1、C列=2と数えます
+          const nameEn = cols[1] ? cols[1].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
+          const nameKana = cols[2] ? cols[2].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
+          // ▲▲▲ ここまで ▲▲▲
           
           if(nameEn || nameKana) {
             brandDictionary.push({ en: nameEn, kana: nameKana });
@@ -95,13 +87,14 @@
       })
       .catch(error => console.error('CSVの読み込みエラー:', error));
 
+    // 【変換ツール】ひらがなをカタカナに変換する機能
     function hiraToKata(str) {
       return str.replace(/[\u3041-\u3096]/g, function(match) {
         var chr = match.charCodeAt(0) + 0x60;
         return String.fromCharCode(chr);
       });
     }
-
+    /* ====== PATCH END ====== */
 
     /* ====== PATCH (棲み分け＆ドリルダウン検索ロジック: 今回の修正・テストエリア) ====== */
     inputField.addEventListener('input', function() {
