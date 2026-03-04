@@ -78,8 +78,7 @@
     }
 
 
-    /* ====== PATCH (棲み分け検索ロジック: 今回の修正・テストエリア) ====== */
-    // 前回のテストコード（英語・カタカナ混在ロジック）から完全に置き換わっています
+    /* ====== PATCH (棲み分け＆ドリルダウン検索ロジック: 今回の修正・テストエリア) ====== */
     inputField.addEventListener('input', function() {
       const val = this.value;
       suggestionBox.innerHTML = ''; 
@@ -89,30 +88,40 @@
         return;
       }
 
-      // 【棲み分け判定】打たれた文字がアルファベットか、日本語かを判定
+      // 【棲み分け判定】
       const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
       let matches = [];
 
+      // ▼▼▼ 今回の修正箇所（Old/New分離） ▼▼▼
       if (isEnglishInput) {
-        // ▼ アルファベット入力時：英語辞書から探し、英語のみを抽出
+        // 【Old Code（部分一致：連動しない原因）】
+        // const lowerVal = val.toLowerCase();
+        // matches = brandDictionary.filter(b => b.en.toLowerCase().includes(lowerVal)).map(b => b.en);
+        
+        // 【New Code（前方一致：ドリルダウンの実現）】
         const lowerVal = val.toLowerCase();
         matches = brandDictionary
-          .filter(b => b.en.toLowerCase().includes(lowerVal))
+          .filter(b => b.en.toLowerCase().startsWith(lowerVal))
           .map(b => b.en); 
       } else {
-        // ▼ 日本語入力時：カタカナに変換して探し、カタカナのみを抽出
+        // 【Old Code（部分一致：連動しない原因）】
+        // const kataVal = hiraToKata(val);
+        // matches = brandDictionary.filter(b => b.kana.includes(kataVal)).map(b => b.kana);
+        
+        // 【New Code（前方一致：ドリルダウンの実現）】
         const kataVal = hiraToKata(val);
         matches = brandDictionary
-          .filter(b => b.kana.includes(kataVal))
+          .filter(b => b.kana.startsWith(kataVal))
           .map(b => b.kana); 
       }
+      // ▲▲▲ ここまで ▲▲▲
 
-      // 画面表示処理
+      // 画面表示処理（一切変更なし・安定稼働）
       if (matches.length > 0) {
         matches.forEach(brandName => {
           const div = document.createElement('div');
           div.className = 'suggestion-item';
-          div.textContent = brandName; // ここには英語かカタカナのどちらかしか入らない
+          div.textContent = brandName; 
           
           div.onclick = function() {
             inputField.value = brandName; 
@@ -125,7 +134,7 @@
         suggestionBox.style.display = 'none'; 
       }
     });
-    /* ====== PATCH END ====== */
+/* ====== PATCH END ====== */
   </script>
 </body>
 </html>
