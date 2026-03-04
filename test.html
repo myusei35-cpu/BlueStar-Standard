@@ -58,18 +58,43 @@
 
 
     /* ====== STABLE (基本機能・データ構造: エラーなく正常動作する基準) ====== */
-    // 【棲み分け辞書】英語とカタカナを完全に分離して管理
-    const brandDictionary = [
-      { en: "BURBERRY", kana: "バーバリー" },
-      { en: "BALENCIAGA", kana: "バレンシアガ" },
-      { en: "BALLY", kana: "バリー" },
-      { en: "BARNEYS NEWYORK", kana: "バーニーズニューヨーク" },
-      { en: "BEAMS", kana: "ビームス" },
-      { en: "BOTTEGA VENETA", kana: "ボッテガヴェネタ" },
-      { en: "BVLGARI", kana: "ブルガリ" }
-    ];
+    
+    // ▼▼▼ 【Old Code（これまでの手打ちテスト辞書：安全のために // で保護）】 ▼▼▼
+    // const brandDictionary = [
+    //   { en: "ADIDAS", kana: "アディダス" },
+    //   { en: "AGNES B", kana: "アニエスベー" },
+    //   { en: "BURBERRY", kana: "バーバリー" },
+    //   { en: "BALENCIAGA", kana: "バレンシアガ" },
+    //   { en: "BALLY", kana: "バリー" },
+    //   { en: "BARNEYS NEWYORK", kana: "バーニーズニューヨーク" },
+    //   { en: "BEAMS", kana: "ビームス" },
+    //   { en: "BOTTEGA VENETA", kana: "ボッテガヴェネタ" },
+    //   { en: "BVLGARI", kana: "ブルガリ" },
+    //   { en: "CELINE", kana: "セリーヌ" },
+    //   { en: "CHANEL", kana: "シャネル" }
+    // ];
 
-    // 【変換ツール】ひらがなをカタカナに変換する機能
+    // ▼▼▼ 【New Code（ご提示いただいた2万件CSV自動読み込みコード）】 ▼▼▼
+    let brandDictionary = []; 
+
+    fetch('brand.csv')
+      .then(response => response.text())
+      .then(text => {
+        const lines = text.split('\n');
+        lines.forEach(line => {
+          if (!line.trim()) return;
+          const cols = line.split(','); 
+          const nameEn = cols[0] ? cols[0].replace(/"/g, '').trim() : "";
+          const nameKana = cols[1] ? cols[1].replace(/"/g, '').trim() : "";
+          
+          if(nameEn || nameKana) {
+            brandDictionary.push({ en: nameEn, kana: nameKana });
+          }
+        });
+        console.log("ブランド辞書の読み込み完了: " + brandDictionary.length + "件");
+      })
+      .catch(error => console.error('CSVの読み込みエラー:', error));
+
     function hiraToKata(str) {
       return str.replace(/[\u3041-\u3096]/g, function(match) {
         var chr = match.charCodeAt(0) + 0x60;
