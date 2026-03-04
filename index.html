@@ -50,7 +50,7 @@
   <span onclick="document.getElementById('keyword').value=''" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 14px;">❌</span>
 </div>
 
-      <input type="file" id="imageInput" accept="image/*" capture="environment" style="display:none;" onchange="showLensSubmit()">
+      <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
       
       <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-size:14px; font-weight:bold; cursor:pointer; white-space:nowrap;" onclick="finalLensSubmit()">
         レンズ連携
@@ -62,9 +62,10 @@
 
     <div class="alert" id="alert"></div>
     
-    <div class="control-row">
-      <button class="btn-lens" onclick="openLens()">📸 直接カメラ</button>
-      <button class="btn-all" onclick="openAll()">全サイトを一括で開く</button>
+    <div class="control-row" style="flex-wrap: wrap; gap: 8px;">
+      <button class="btn-lens" onclick="openGallery()">📁 画像選択</button>
+      <button class="btn-lens" onclick="openCamera()" style="background-color: #059669;">📸 カメラ</button>
+      <button class="btn-all" onclick="openAll()">全サイト</button>
       <button class="btn-gemini" onclick="launchNativeLens()" style="background-color: #ea4335; color: #fff;">🔍 レンズ起動</button>
     </div>
 
@@ -255,12 +256,38 @@ function finalLensSubmit() {
   });
   /* ====== STABLE END ====== */
 
-  /* ====== PATCH (本物レンズアプリ起動機能) START ====== */
+  /* ====== PATCH (カメラ分離＆レンズ本物起動の修正) START ====== */
 
-  // 新規追加：Androidシステムに本物のGoogle Lensアプリを強制起動させる
+// 【Old Code（前回追加した不完全なレンズ起動）】
+// function launchNativeLens() {
+//   var intentUrl = 'intent://#Intent;package=com.google.ar.lens;end;';
+//   var a = document.createElement('a');
+//   a.href = intentUrl;
+//   document.body.appendChild(a);
+//   a.click();
+//   document.body.removeChild(a);
+// }
+
+// 【New Code（アルバム/カメラの切り替え ＋ 完全版レンズ起動）】
+  
+  // ① 既存の「画像選択（アルバム）」を開く処理
+  function openGallery() {
+    var input = document.getElementById('imageInput');
+    input.removeAttribute('capture'); // カメラ強制を解除
+    input.click();
+  }
+
+  // ② 「直接カメラ」を開く処理
+  function openCamera() {
+    var input = document.getElementById('imageInput');
+    input.setAttribute('capture', 'environment'); // カメラ強制を付与
+    input.click();
+  }
+
+  // ③ 本物のレンズアプリを起動（Playストア行きを防ぐ「直接起動命令」を追加）
   function launchNativeLens() {
-    // Google Lensのパッケージ（com.google.ar.lens）を直接指定
-    var intentUrl = 'intent://#Intent;package=com.google.ar.lens;end;';
+    // action=MAIN と category=LAUNCHER を追加し、システムに直接アプリを開かせる
+    var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
     
     var a = document.createElement('a');
     a.href = intentUrl;
