@@ -21,9 +21,13 @@
   <div class="container">
     <h3>★ 予測検索テスト（本番環境とは完全に独立）</h3>
     
+    // <div class="input-wrapper">
+      // <input type="text" id="testKeyword" list="brandList" placeholder="ブランド名を入力（例：ば、さ、の）">
+    // </div>
+
     <div class="input-wrapper">
-      <input type="text" id="testKeyword" list="brandList" placeholder="ブランド名を入力（例：ば、さ、の）">
-    </div>
+  <input type="text" id="testKeyword" autocomplete="off" placeholder="ブランド名を入力（例：ば、さ、の）">
+</div>
     
     <datalist id="brandList"></datalist>
 
@@ -109,6 +113,63 @@ document.addEventListener('click', function(e) {
 });
 
 /* ====== PATCH END ====== */
+
+    /* ====== PATCH 2 (テスト用：縦型サジェスト追加) START ====== */
+
+// 【Old Code（もし古いテスト用JSがあればコメントアウトで保護）】
+
+// 【New Code（</script>の直前に追加）】
+
+// 1. サジェストを表示するための「専用の窓」を作成
+const suggestionBox = document.createElement('div');
+suggestionBox.id = 'suggestion-box';
+suggestionBox.style = "position:absolute; background:#1e293b; border:1px solid #475569; width:100%; max-height:300px; overflow-y:auto; z-index:2000; border-radius:0 0 8px 8px; display:none; box-shadow: 0 10px 25px rgba(0,0,0,0.6);";
+
+// ★対象をメインの 'keyword' ではなくテスト用の 'testKeyword' に指定
+const inputField = document.getElementById('testKeyword');
+inputField.parentNode.style.position = 'relative'; 
+inputField.parentNode.appendChild(suggestionBox);
+
+// 2. 入力に合わせて候補を探す処理
+inputField.addEventListener('input', function() {
+    const val = this.value.toLowerCase();
+    suggestionBox.innerHTML = ''; 
+    
+    if (!val) {
+        suggestionBox.style.display = 'none';
+        return;
+    }
+
+    // ★ 辞書データ（後ほど2万件をここに統合します）
+    const testBrands = ["BURBERRY (バーバリー)", "BALENCIAGA (バレンシアガ)", "BALLY (バリー)", "BARNEYS NEWYORK", "BEAMS", "BOTTEGA VENETA", "BVLGARI"];
+    const matches = testBrands.filter(b => b.toLowerCase().includes(val));
+
+    if (matches.length > 0) {
+        matches.forEach(brand => {
+            const div = document.createElement('div');
+            div.textContent = brand;
+            div.style = "padding:16px 14px; border-bottom:1px solid #334155; cursor:pointer; color:#f8fafc; font-weight:bold; font-size:16px;";
+            
+            div.onclick = function() {
+                inputField.value = brand; 
+                suggestionBox.style.display = 'none'; 
+            };
+            suggestionBox.appendChild(div);
+        });
+        suggestionBox.style.display = 'block'; 
+    } else {
+        suggestionBox.style.display = 'none'; 
+    }
+});
+
+// 3. 窓の外をタップしたら閉じる
+document.addEventListener('touchstart', function(e) {
+    if (e.target !== inputField && !suggestionBox.contains(e.target)) {
+        suggestionBox.style.display = 'none';
+    }
+});
+
+/* ====== PATCH 2 END ====== */
   </script>
 </body>
 </html>
