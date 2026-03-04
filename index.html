@@ -63,11 +63,11 @@
     <div class="alert" id="alert"></div>
     
     <div class="control-row" style="flex-wrap: wrap; gap: 8px;">
-      <button class="btn-lens" onclick="openLens()">📷 カメラ / 画像選択</button>
+      <button class="btn-lens" onclick="openGallery()">📁 画像選択</button>
+      <button class="btn-lens" onclick="openCamera()" style="background-color: #059669;">📸 カメラ</button>
       <button class="btn-all" onclick="openAll()">全サイト</button>
       <button class="btn-gemini" onclick="launchNativeLens()" style="background-color: #ea4335; color: #fff;">🔍 レンズ起動</button>
     </div>
-<script>
   /* ====== STABLE (安定拡張) START ====== */
   // ▼ Patchへ降格のため保護（コメントアウト）▼
   // window.addEventListener('load', function() {
@@ -254,29 +254,22 @@ function finalLensSubmit() {
   });
   /* ====== STABLE END ====== */
 
-  /* ====== PATCH (カメラ分離＆レンズ本物起動の修正) START ====== */
-
-// 【Old Code（前回追加した不完全なレンズ起動）】
-// function launchNativeLens() {
-//   var intentUrl = 'intent://#Intent;package=com.google.ar.lens;end;';
-//   var a = document.createElement('a');
-//   a.href = intentUrl;
-//   document.body.appendChild(a);
-//   a.click();
-//   document.body.removeChild(a);
-// }
-
-// 【New Code（アルバム/カメラの切り替え ＋ 完全版レンズ起動）】
-  
-  // ① 既存の「画像選択（アルバム）」を開く処理
-  function openLens() {
+  /* ====== PATCH (カメラ強制復活 ＆ 組み込みLens起動) START ====== */
+  function openGallery() {
     var input = document.getElementById('imageInput');
-    input.removeAttribute('capture'); 
+    input.removeAttribute('capture');
+    input.click();
+  }
+
+  function openCamera() {
+    var input = document.getElementById('imageInput');
+    input.setAttribute('capture', 'environment'); 
     input.click();
   }
 
   function launchNativeLens() {
-    var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
+    // 単独アプリではなく、スマホに最初から入っている「Google検索アプリ内蔵のLens」を直接叩き起こします
+    var intentUrl = 'intent://#Intent;action=android.intent.action.VIEW;component=com.google.android.googlequicksearchbox/com.google.android.apps.search.lens.LensActivity;end;';
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
