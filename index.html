@@ -1,7 +1,5 @@
 <!DOCTYPE html>
 <html>
-
-
 <head>
   <base target="_top">
   <meta charset="UTF-8">
@@ -12,11 +10,8 @@
   <link rel="manifest" href="https://myusei35-cpu.github.io/BlueStar-Standard/manifest.json">
   <title>BlueStar Research Hub</title>
 
-
-
   <style>
     /* ====== FROZEN (触らない) START ====== */
-    /* 既存のスタイル設定。変更禁止 */
     body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; }
     .header { background-color: #1e293b; padding: 15px; text-align: center; font-size: 1.4em; font-weight: bold; }
     .header span.star { color: #f59e0b; margin-right: 6px; }
@@ -24,9 +19,10 @@
     .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
     .input-row input[type="text"] { flex-grow: 1; padding: 12px 14px; border: none; border-radius: 6px; background-color: #334155; color: #f8fafc; font-size: 1em; outline: none; }
     .input-row button.btn-generate { background-color: #dc2626; color: #ffffff; border: none; border-radius: 6px; padding: 12px 16px; font-weight: bold; cursor: pointer; }
-    .control-row { display: flex; gap: 10px; margin-bottom: 20px; }
-    .control-row button { flex: 1; padding: 12px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #ffffff; }
+    .control-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .control-row button { flex: 1; min-width: 120px; padding: 12px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #ffffff; }
     .btn-lens { background-color: #475569; }
+    .btn-camera { background-color: #059669; }
     .btn-all { background-color: #475569; }
     .btn-gemini { background-color: #7c3aed; }
     .btn-gemini.on { background-color: #6b21a8; }
@@ -43,85 +39,54 @@
 <body>
   <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB</div>
   <div class="container">
-    <div class="input-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-     
-      <div style="position: relative; flex: 1; min-width: 140px; display: flex;">
-  <input id="keyword" type="text" placeholder="キーワードを入力" style="width: 100%; padding-right: 30px; box-sizing: border-box;" />
-  <span onclick="document.getElementById('keyword').value=''" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 14px;">❌</span>
-</div>
-
+    <div class="input-row">
+      <div style="position: relative; flex: 1; display: flex;">
+        <input id="keyword" type="text" placeholder="キーワードを入力" style="width: 100%; padding-right: 30px;" />
+        <span onclick="document.getElementById('keyword').value=''" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;">❌</span>
+      </div>
       <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
-      
-      <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-size:14px; font-weight:bold; cursor:pointer; white-space:nowrap;" onclick="finalLensSubmit()">
-        レンズ連携
-      </button>
-
-      <button class="btn-generate" id="generateBtn" onclick="generateLinks()" style="white-space:nowrap;">生成</button>
-      
+      <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold;" onclick="finalLensSubmit()">レンズ連携</button>
+      <button class="btn-generate" onclick="generateLinks()">生成</button>
     </div>
 
     <div class="alert" id="alert"></div>
     
-    <div class="control-row" style="flex-wrap: wrap; gap: 8px;">
+    <div class="control-row">
       <button class="btn-lens" onclick="openGallery()">📁 画像選択</button>
-      <button class="btn-lens" onclick="openCamera()" style="background-color: #059669;">📸 カメラ</button>
+      <button class="btn-camera" onclick="openCamera()">📸 カメラ</button>
       <button class="btn-all" onclick="openAll()">全サイト</button>
-      <button class="btn-gemini" onclick="launchNativeLens()" style="background-color: #ea4335; color: #fff;">🔍 レンズ起動</button>
+      <button id="geminiToggle" class="btn-gemini" onclick="toggleGemini()">Gemini: OFF</button>
+      <button style="background-color: #ea4335;" onclick="launchNativeLens()">🔍 レンズ起動</button>
     </div>
-  /* ====== STABLE (安定拡張) START ====== */
-  // ▼ Patchへ降格のため保護（コメントアウト）▼
-  // window.addEventListener('load', function() {
-  //   var params = new URLSearchParams(window.location.search);
-  //   var kw = params.get('keyword');
-  //   if (kw) { document.getElementById('keyword').value = decodeURIComponent(kw); }
-  // });
+    
+    <div class="site-list" id="siteList"></div>
+  </div>
 
+<script>
+  /* ====== STABLE (安定版プログラム) ====== */
   var geminiMode = false;
+
   function toggleGemini() {
     geminiMode = !geminiMode;
     var btn = document.getElementById('geminiToggle');
-    btn.textContent = geminiMode ? 'Geminiモード：ON' : 'Geminiモード：OFF';
+    btn.textContent = geminiMode ? 'Gemini: ON' : 'Gemini: OFF';
     btn.classList.toggle('on', geminiMode);
   }
 
-  
-  function openGemini(keyword) {
-    var prompt = 'あなたはプロの物販セラーです。最新の相場を検索して報告してください。\n回答は必ず、指定のテンプレートを一切変えず、日本語の指示に従って作成してください。\n商品名：' + keyword;
-    openFinalURL('https://gemini.google.com/app?q=' + encodeURIComponent(prompt));
+  function openGallery() {
+    var input = document.getElementById('imageInput');
+    input.removeAttribute('capture');
+    input.click();
   }
 
-  function openLens() { document.getElementById('imageInput').click(); }
-  function openAll() { document.querySelectorAll('#siteList button').forEach(btn => btn.click()); }
+  function openCamera() {
+    var input = document.getElementById('imageInput');
+    input.setAttribute('capture', 'environment');
+    input.click();
+  }
 
-  
-  /* ====== PATCH (メルカリ本物アプリ直結) START ====== */
-
-// 【Old Code（テスト版コードを保護）】
-// function openFinalURL(url) {
-//   alert("最新のQuetta強制パッチが発動しました！"); 
-//   var targetPath = url.replace(/^https?:\/\//, '');
-//   var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
-//   var a = document.createElement('a');
-//   a.href = intentUrl;
-//   document.body.appendChild(a);
-//   a.click();
-//   document.body.removeChild(a);
-// }
-
-// 【New Code（メルカリのURLなら本物のアプリを直接起動）】
-  function openFinalURL(url) {
-    var targetPath = url.replace(/^https?:\/\//, '');
-    var intentUrl = '';
-
-    // URLの中に「mercari.com」が含まれているか判定
-    if (url.indexOf('mercari.com') !== -1) {
-      // メルカリの場合：本物のメルカリアプリ（com.kouzoh.mercari）を強制召喚！
-      intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=com.kouzoh.mercari;end;';
-    } else {
-      // それ以外（ヤフオクやセカスト等）：通常のシステムに任せる
-      intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
-    }
-
+  function launchNativeLens() {
+    var intentUrl = 'intent://#Intent;action=android.intent.action.VIEW;component=com.google.android.googlequicksearchbox/com.google.android.apps.search.lens.LensActivity;end;';
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
@@ -129,83 +94,62 @@
     document.body.removeChild(a);
   }
 
-/* ====== PATCH END ====== */
-
-
-function showLensSubmit() {
-  var fileInput = document.getElementById('imageInput');
-  if (fileInput.files && fileInput.files[0]) {
-    // ボタンをインラインブロックで表示し、レイアウト崩れを防ぐ
-    document.getElementById('lensSubmitBtn').style.display = 'inline-block';
-  }
-}
-
-function finalLensSubmit() {
-  var fileInput = document.getElementById('imageInput');
-  var keyword = document.getElementById('keyword').value.trim();
- 
-  if (!fileInput.files || !fileInput.files[0]) return;
-
-  var searchKw = keyword ? keyword + " メルカリ" : "メルカリ";
-
-  // 1. 空の新しいタブを開く
-  var newWin = window.open('', '_blank');
-  if (!newWin) {
-    alert('ポップアップがブロックされました。ブラウザの設定で許可してください。');
-    return;
+  function openFinalURL(url) {
+    var targetPath = url.replace(/^https?:\/\//, '');
+    var intentUrl = (url.indexOf('mercari.com') !== -1) 
+      ? 'intent://' + targetPath + '#Intent;scheme=https;package=com.kouzoh.mercari;end;'
+      : 'intent://' + targetPath + '#Intent;scheme=https;end;';
+    var a = document.createElement('a');
+    a.href = intentUrl;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
-  // 2. 新しいタブの中身を初期化（Originリセット）
-  var doc = newWin.document;
-  doc.open();
-  // Live Serverの誤作動を防ぐためにタグを分割
-  doc.write('<html><head><meta name="referrer" content="no-referrer"></' + 'head><body><p>Google Lensに転送中...</p></' + 'body></' + 'html>');
-  doc.close();
+  function showLensSubmit() {
+    var fileInput = document.getElementById('imageInput');
+    document.getElementById('lensSubmitBtn').style.display = (fileInput.files.length > 0) ? 'inline-block' : 'none';
+  }
 
-  // 3. フォーム構築
-  var form = doc.createElement('form');
-  form.method = 'POST';
-  form.action = 'https://lens.google.com/upload?ep=gisbubu&hl=ja&q=' + encodeURIComponent(searchKw);
-  form.enctype = 'multipart/form-data';
-
-  // 4. 画像データ移植
-  var dataInput = doc.createElement('input');
-  dataInput.type = 'file';
-  dataInput.name = 'encoded_image';
- 
-  var container = new DataTransfer();
-  container.items.add(fileInput.files[0]);
-  dataInput.files = container.files;
-
-  form.appendChild(dataInput);
-  doc.body.appendChild(form);
-
-  // 5. 送信
-  form.submit();
-
-  // 6. 【修正】ボタンを隠し、ファイル選択状態をリセット（2回目バグの解消）
-  document.getElementById('lensSubmitBtn').style.display = 'none';
-  fileInput.value = '';
-}
-
-
+  function finalLensSubmit() {
+    var fileInput = document.getElementById('imageInput');
+    var keyword = document.getElementById('keyword').value.trim();
+    if (!fileInput.files[0]) return;
+    var searchKw = keyword ? keyword + " メルカリ" : "メルカリ";
+    var newWin = window.open('', '_blank');
+    if (!newWin) return alert('ポップアップを許可してください');
+    var doc = newWin.document;
+    doc.open();
+    doc.write('<html><head><meta name="referrer" content="no-referrer"></head><body><p>Lens転送中...</p></body></html>');
+    doc.close();
+    var form = doc.createElement('form');
+    form.method = 'POST';
+    form.action = 'https://lens.google.com/upload?ep=gisbubu&hl=ja&q=' + encodeURIComponent(searchKw);
+    form.enctype = 'multipart/form-data';
+    var dataInput = doc.createElement('input');
+    dataInput.type = 'file';
+    dataInput.name = 'encoded_image';
+    var container = new DataTransfer();
+    container.items.add(fileInput.files[0]);
+    dataInput.files = container.files;
+    form.appendChild(dataInput);
+    doc.body.appendChild(form);
+    form.submit();
+    document.getElementById('lensSubmitBtn').style.display = 'none';
+    fileInput.value = '';
+  }
 
   function generateLinks() {
     var keyword = document.getElementById('keyword').value.trim();
     var alertEl = document.getElementById('alert');
-
-    // 修正：空欄時のエラーメッセージがちゃんと画面に出るように表示設定を追加
-    if (!keyword) { 
-      alertEl.textContent = 'キーワードを入力してください'; 
-      alertEl.style.display = 'block'; 
-      return; 
+    if (!keyword) {
+      alertEl.textContent = 'キーワードを入力してください';
+      alertEl.style.display = 'block';
+      return;
     }
-    // 入力されていればエラーメッセージを隠す
-    alertEl.style.display = 'none'; 
-
+    alertEl.style.display = 'none';
     var encoded = encodeURIComponent(keyword);
     var sites = [
-      // 修正：item_condition_id=3(目立った傷や汚れなし)、seller_type=0(個人出品)、sort=created_at&order=desc(新しい順)
       { title: 'メルカリ：売り切れ', desc: '相場確認', url: 'https://jp.mercari.com/search?keyword=' + encoded + '&status=sold_out&item_condition_id=3&seller_type=0&sort=created_at&order=desc' },
       { title: 'メルカリ：販売中', desc: 'ライバル確認', url: 'https://jp.mercari.com/search?keyword=' + encoded + '&status=on_sale&item_condition_id=3&seller_type=0&sort=created_at&order=desc' },
       { title: 'ヤフオク', desc: '落札相場', url: 'https://auctions.yahoo.co.jp/search/search?p=' + encoded + '&stf=1&s1=new&o1=d' },
@@ -221,62 +165,34 @@ function finalLensSubmit() {
       card.innerHTML = '<div class="site-info"><div class="title">' + site.title + '</div><div class="desc">' + site.desc + '</div></div><button onclick="openFinalURL(\'' + site.url + '\')">開く</button>';
       listEl.appendChild(card);
     });
-    if (geminiMode) { openGemini(keyword); }
+    if (geminiMode) {
+      var prompt = 'あなたはプロの物販セラーです。最新の相場を検索して報告してください。回答はテンプレートを遵守してください。商品名：' + keyword;
+      openFinalURL('https://gemini.google.com/app?q=' + encodeURIComponent(prompt));
+    }
   }
-  
+
+  function openAll() { document.querySelectorAll('#siteList button').forEach(btn => btn.click()); }
 
   window.addEventListener('load', function() {
     var params = new URLSearchParams(window.location.search);
     var kw = params.get('keyword');
     if (kw) { document.getElementById('keyword').value = decodeURIComponent(kw); }
 
-    /* --- 新規追加：画像ペーストの自動検知 --- */
     document.addEventListener('paste', function(e) {
       if (!e.clipboardData || !e.clipboardData.items) return;
       var items = e.clipboardData.items;
-      
       for (var i = 0; i < items.length; i++) {
-        // クリップボード内に「画像」を発見した場合のみ発動
         if (items[i].type.indexOf("image") !== -1) {
           var file = items[i].getAsFile();
           var fileInput = document.getElementById('imageInput');
           var container = new DataTransfer();
-          
-          // 裏側でこっそりファイル選択状態にする
           container.items.add(file);
           fileInput.files = container.files;
-          
-          // 「レンズ連携」の赤いボタンを出現させる
           showLensSubmit();
         }
       }
     });
   });
-  /* ====== STABLE END ====== */
-
-  /* ====== PATCH (カメラ強制復活 ＆ 組み込みLens起動) START ====== */
-  function openGallery() {
-    var input = document.getElementById('imageInput');
-    input.removeAttribute('capture');
-    input.click();
-  }
-
-  function openCamera() {
-    var input = document.getElementById('imageInput');
-    input.setAttribute('capture', 'environment'); 
-    input.click();
-  }
-
-  function launchNativeLens() {
-    // 単独アプリではなく、スマホに最初から入っている「Google検索アプリ内蔵のLens」を直接叩き起こします
-    var intentUrl = 'intent://#Intent;action=android.intent.action.VIEW;component=com.google.android.googlequicksearchbox/com.google.android.apps.search.lens.LensActivity;end;';
-    var a = document.createElement('a');
-    a.href = intentUrl;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-/* ====== PATCH END ====== */
 </script>
 </body>
 </html>
