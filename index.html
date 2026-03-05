@@ -185,9 +185,9 @@
     btn.classList.toggle('on', geminiMode);
   }
 
-  // 【修正済】レンズ起動（Playストア回避）
+  // 【完全修正版】ブラウザを挟まず、独立した「Googleレンズ」アプリを一発起動する
   function launchNativeLens() {
-    var intentUrl = 'intent://lens.google.com/#Intent;scheme=https;end;';
+    var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
