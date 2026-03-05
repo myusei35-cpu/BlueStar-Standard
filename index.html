@@ -167,26 +167,22 @@
     btn.classList.toggle('on', geminiMode);
   }
 
-  /* ====== PATCH (Playストア完全回避 ＆ レンズ直接起動) ====== */
+  /* ====== PATCH (レンズカメラ直接起動) ====== */
 
-  // 【Old Code（存在しない独立アプリを探してPlayストアに飛ばされていた処理）】
+  // 【Old Code（特殊命令が弾かれ、ちっちゃいボタンのウェブ画面に逃がされていた処理）】
   // function launchNativeLens() {
-  //   closeActionMenu();
-  //   var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
+  //   closeActionMenu(); 
+  //   var intentUrl = 'intent://#Intent;action=com.google.android.apps.search.lens.action.LENS;package=com.google.android.googlequicksearchbox;S.browser_fallback_url=https%3A%2F%2Fwww.google.co.jp%2Fimghp;end;';
   //   window.location.href = intentUrl;
   // }
 
-  // 【New Code（Googleアプリ内のレンズを直撃し、ダメならWEB版レンズを開く完璧な処理）】
+  // 【New Code（GoogleアプリにレンズのURLを強制送達し、一撃でカメラを立ち上げる処理）】
   function launchNativeLens() {
-    closeActionMenu(); // モーダルをスッと閉じる
+    closeActionMenu(); 
     
-    // 1. スマホに絶対入っている「Googleアプリ」内のレンズ機能を直接呼び出す最新コマンド
-    // 2. 「S.browser_fallback_url」という保険をかけ、失敗時はPlayストアではなくWEB版Google（レンズボタンあり）に逃がす
-    var intentUrl = 'intent://#Intent;' +
-                    'action=com.google.android.apps.search.lens.action.LENS;' +
-                    'package=com.google.android.googlequicksearchbox;' +
-                    'S.browser_fallback_url=https%3A%2F%2Fwww.google.co.jp%2Fimghp;' +
-                    'end;';
+    // packageで「Googleアプリ」を名指ししつつ、開く先を「lens.google.com」に指定。
+    // これにより、Googleアプリが自動で直接レンズのカメラ画面を開きます。
+    var intentUrl = 'intent://lens.google.com/#Intent;scheme=https;action=android.intent.action.VIEW;package=com.google.android.googlequicksearchbox;end;';
                     
     window.location.href = intentUrl;
   }
