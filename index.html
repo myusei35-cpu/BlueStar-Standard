@@ -31,7 +31,7 @@
     .site-info .desc { font-size: 0.82em; color: #94a3b8; }
     .site-card button { background-color: #2563eb; border: none; border-radius: 6px; padding: 8px 14px; color: #ffffff; font-weight: bold; }
     
-    /* 追加: 予測検索リストのデザイン */
+    /* 予測検索リストのデザイン */
     .suggestion-box {
       position: absolute;
       top: 100%;
@@ -92,7 +92,7 @@
   </div>
 
 <script>
-  /* ====== STABLE (完全統合版プログラム) ====== */
+  /* ====== STABLE (完全統合版プログラム: 予測検索 + レンズ補正 + 全機能) ====== */
   var geminiMode = false;
 
   // 1. 2万件の辞書データを読み込む
@@ -104,7 +104,6 @@
       lines.forEach(line => {
         if (!line.trim()) return;
         const cols = line.split(','); 
-        // B列(英語)とC列(カタカナ)を取得し、前後のスペースを削除
         const nameEn = cols[1] ? cols[1].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
         const nameKana = cols[2] ? cols[2].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
         
@@ -178,7 +177,7 @@
   });
 
 
-  /* --- 既存の機能群（カメラ・Lens連携・生成など） --- */
+  /* --- 既存の機能群 --- */
   function toggleGemini() {
     geminiMode = !geminiMode;
     var btn = document.getElementById('geminiToggle');
@@ -186,8 +185,9 @@
     btn.classList.toggle('on', geminiMode);
   }
 
+  // 【修正済】レンズ起動（Playストア回避）
   function launchNativeLens() {
-    var intentUrl = 'intent://#Intent;action=google.lens.intent.action.NEW_SEARCH;package=com.google.ar.lens;end;';
+    var intentUrl = 'intent://lens.google.com/#Intent;scheme=https;end;';
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
@@ -226,39 +226,58 @@
     }
   }
 
+  // 【修正済】画像送信時の横倒し補正
   function finalLensSubmit() {
     var fileInput = document.getElementById('imageInput');
     var keyword = document.getElementById('keyword').value.trim();
     if (!fileInput.files || !fileInput.files[0]) return;
 
     var searchKw = keyword ? keyword + " メルカリ" : "メルカリ";
+    var file = fileInput.files[0];
+
     var newWin = window.open('', '_blank');
     if (!newWin) return alert('ポップアップを許可してください');
-
     var doc = newWin.document;
     doc.open();
-    doc.write('<html><head><meta name="referrer" content="no-referrer"></head><body><p>Lens転送中...</p></body></html>');
+    doc.write('<html><head><meta name="referrer" content="no-referrer"></head><body style="background:#0f172a; color:#fff; text-align:center; padding-top:20%;"><p>画像を最適化してLensへ転送中...</p></body></html>');
     doc.close();
 
-    var form = doc.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://lens.google.com/upload?ep=gisbubu&hl=ja&q=' + encodeURIComponent(searchKw);
-    form.enctype = 'multipart/form-data';
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url); 
+      
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
 
-    var dataInput = doc.createElement('input');
-    dataInput.type = 'file';
-    dataInput.name = 'encoded_image';
-    
-    var container = new DataTransfer();
-    container.items.add(fileInput.files[0]);
-    dataInput.files = container.files;
+      canvas.toBlob(function(blob) {
+        var correctedFile = new File([blob], "image.jpg", { type: "image/jpeg" });
 
-    form.appendChild(dataInput);
-    doc.body.appendChild(form);
-    form.submit();
+        var form = doc.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://lens.google.com/upload?ep=gisbubu&hl=ja&q=' + encodeURIComponent(searchKw);
+        form.enctype = 'multipart/form-data';
 
-    document.getElementById('lensSubmitBtn').style.display = 'none';
-    fileInput.value = '';
+        var dataInput = doc.createElement('input');
+        dataInput.type = 'file';
+        dataInput.name = 'encoded_image';
+
+        var container = new DataTransfer();
+        container.items.add(correctedFile);
+        dataInput.files = container.files;
+
+        form.appendChild(dataInput);
+        doc.body.appendChild(form);
+        form.submit();
+
+        document.getElementById('lensSubmitBtn').style.display = 'none';
+        fileInput.value = '';
+      }, 'image/jpeg', 0.9);
+    };
+    img.src = url;
   }
 
   function generateLinks() {
