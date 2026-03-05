@@ -167,13 +167,30 @@
     btn.classList.toggle('on', geminiMode);
   }
 
-  // 【修正版】Playストア回避の最終手段：直接URL遷移に変更
+  /* ====== PATCH (Playストア完全回避 ＆ レンズ直接起動) ====== */
+
+  // 【Old Code（存在しない独立アプリを探してPlayストアに飛ばされていた処理）】
+  // function launchNativeLens() {
+  //   closeActionMenu();
+  //   var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
+  //   window.location.href = intentUrl;
+  // }
+
+  // 【New Code（Googleアプリ内のレンズを直撃し、ダメならWEB版レンズを開く完璧な処理）】
   function launchNativeLens() {
-    closeActionMenu(); // モーダルを閉じる
-    var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
-    // a.click()というプログラム操作をやめ、ブラウザ本来の移動コマンドを使用
+    closeActionMenu(); // モーダルをスッと閉じる
+    
+    // 1. スマホに絶対入っている「Googleアプリ」内のレンズ機能を直接呼び出す最新コマンド
+    // 2. 「S.browser_fallback_url」という保険をかけ、失敗時はPlayストアではなくWEB版Google（レンズボタンあり）に逃がす
+    var intentUrl = 'intent://#Intent;' +
+                    'action=com.google.android.apps.search.lens.action.LENS;' +
+                    'package=com.google.android.googlequicksearchbox;' +
+                    'S.browser_fallback_url=https%3A%2F%2Fwww.google.co.jp%2Fimghp;' +
+                    'end;';
+                    
     window.location.href = intentUrl;
   }
+  /* ====== PATCH END ====== */
 
   function openGallery() {
     closeActionMenu();
