@@ -19,45 +19,34 @@
     .input-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
     .input-row input[type="text"] { flex-grow: 1; padding: 12px 14px; border: none; border-radius: 6px; background-color: #334155; color: #f8fafc; font-size: 1em; outline: none; }
     .btn-generate { background-color: #dc2626; color: #ffffff; border: none; border-radius: 6px; padding: 12px 16px; font-weight: bold; cursor: pointer; }
+    
+    /* 統合されたコントロールボタン群 */
     .control-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .control-row button { flex: 1; min-width: 120px; padding: 12px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #ffffff; }
-    .btn-lens { background-color: #475569; }
-    .btn-camera { background-color: #059669; }
+    .btn-action-menu { background-color: #059669; font-size: 1.1em; } /* 新・統一ボタン */
     .btn-all { background-color: #475569; }
     .btn-gemini { background-color: #7c3aed; }
+    
     .alert { color: #f87171; margin-bottom: 15px; display: none; }
     .site-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
     .site-info .title { font-weight: bold; margin-bottom: 4px; }
     .site-info .desc { font-size: 0.82em; color: #94a3b8; }
     .site-card button { background-color: #2563eb; border: none; border-radius: 6px; padding: 8px 14px; color: #ffffff; font-weight: bold; }
     
-    /* 予測検索リストのデザイン */
-    .suggestion-box {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      width: 100%;
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      z-index: 1000;
-      max-height: 200px;
-      overflow-y: auto;
-      display: none;
-    }
-    .suggestion-item {
-      padding: 10px 14px;
-      cursor: pointer;
-      border-bottom: 1px solid #334155;
-      color: #f8fafc;
-    }
-    .suggestion-item:last-child {
-      border-bottom: none;
-    }
-    .suggestion-item:active {
-      background-color: #334155;
-    }
+    /* サジェスト（2万件）リスト */
+    .suggestion-box { position: absolute; top: 100%; left: 0; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; max-height: 200px; overflow-y: auto; display: none; }
+    .suggestion-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #334155; color: #f8fafc; }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:active { background-color: #334155; }
+
+    /* ====== 新機能：アクション選択画面（モーダル） ====== */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
+    .modal-content { background-color: #1e293b; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; box-sizing: border-box; text-align: center; animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
+    .modal-btn.camera { background-color: #059669; }
+    .modal-btn.lens { background-color: #ea4335; }
+    .modal-btn.cancel { background-color: transparent; border: 1px solid #64748b; color: #94a3b8; margin-bottom: 0; }
   </style>
 </head>
 <body>
@@ -72,7 +61,7 @@
       
       <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
       <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
-        レンズ連携
+        レンズへ転送
       </button>
 
       <button class="btn-generate" onclick="generateLinks()">生成</button>
@@ -81,21 +70,28 @@
     <div class="alert" id="alert"></div>
     
     <div class="control-row">
-      <button class="btn-lens" onclick="openGallery()">📁 画像選択</button>
-      <button class="btn-camera" onclick="openCamera()">📸 カメラ</button>
+      <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
       <button class="btn-all" onclick="openAll()">全サイト</button>
       <button id="geminiToggle" class="btn-gemini" onclick="toggleGemini()">Gemini: OFF</button>
-      <button style="background-color: #ea4335;" onclick="launchNativeLens()">🔍 レンズ起動</button>
     </div>
     
     <div class="site-list" id="siteList"></div>
   </div>
 
+  <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">どちらを起動しますか？</h3>
+      <button class="modal-btn camera" onclick="openCamera()">📸 直接カメラで撮影</button>
+      <button class="modal-btn" onclick="openGallery()">📁 アルバムから選択</button>
+      <button class="modal-btn lens" onclick="launchNativeLens()">🔍 Googleレンズアプリ起動</button>
+      <button class="modal-btn cancel" onclick="closeActionMenu(event)">キャンセル</button>
+    </div>
+  </div>
+
 <script>
-  /* ====== STABLE (完全統合版プログラム: 予測検索 + レンズ補正 + 全機能) ====== */
+  /* ====== STABLE (完全統合版プログラム) ====== */
   var geminiMode = false;
 
-  // 1. 2万件の辞書データを読み込む
   let brandDictionary = []; 
   fetch('brand.csv')
     .then(response => response.text())
@@ -106,49 +102,34 @@
         const cols = line.split(','); 
         const nameEn = cols[1] ? cols[1].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
         const nameKana = cols[2] ? cols[2].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
-        
-        if(nameEn || nameKana) {
-          brandDictionary.push({ en: nameEn, kana: nameKana });
-        }
+        if(nameEn || nameKana) brandDictionary.push({ en: nameEn, kana: nameKana });
       });
-      console.log("ブランド辞書の読み込み完了: " + brandDictionary.length + "件");
     })
-    .catch(error => console.error('CSVの読み込みエラー:', error));
+    .catch(error => console.error('CSVエラー:', error));
 
-  // ひらがなをカタカナに変換
   function hiraToKata(str) {
     return str.replace(/[\u3041-\u3096]/g, function(match) {
-      var chr = match.charCodeAt(0) + 0x60;
-      return String.fromCharCode(chr);
+      return String.fromCharCode(match.charCodeAt(0) + 0x60);
     });
   }
 
-  // 2. ドリルダウン予測検索の動作
   const inputField = document.getElementById('keyword');
   const suggestionBox = document.getElementById('suggestionBox');
 
   inputField.addEventListener('input', function() {
     const val = this.value;
     suggestionBox.innerHTML = ''; 
-
-    if (!val) {
-      suggestionBox.style.display = 'none';
-      return;
-    }
+    if (!val) { suggestionBox.style.display = 'none'; return; }
 
     const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
     let matches = [];
 
     if (isEnglishInput) {
       const lowerVal = val.toLowerCase();
-      matches = brandDictionary
-        .filter(b => b.en.toLowerCase().startsWith(lowerVal))
-        .map(b => b.en); 
+      matches = brandDictionary.filter(b => b.en.toLowerCase().startsWith(lowerVal)).map(b => b.en); 
     } else {
       const kataVal = hiraToKata(val);
-      matches = brandDictionary
-        .filter(b => b.kana.startsWith(kataVal))
-        .map(b => b.kana); 
+      matches = brandDictionary.filter(b => b.kana.startsWith(kataVal)).map(b => b.kana); 
     }
 
     if (matches.length > 0) {
@@ -156,11 +137,7 @@
         const div = document.createElement('div');
         div.className = 'suggestion-item';
         div.textContent = brandName; 
-        
-        div.onclick = function() {
-          inputField.value = brandName; 
-          suggestionBox.style.display = 'none'; 
-        };
+        div.onclick = function() { inputField.value = brandName; suggestionBox.style.display = 'none'; };
         suggestionBox.appendChild(div);
       });
       suggestionBox.style.display = 'block'; 
@@ -169,13 +146,18 @@
     }
   });
 
-  // 画面の他をタップしたら候補リストを閉じる
   document.addEventListener('click', function(e) {
-    if (e.target !== inputField && e.target !== suggestionBox) {
-      suggestionBox.style.display = 'none';
-    }
+    if (e.target !== inputField && e.target !== suggestionBox) suggestionBox.style.display = 'none';
   });
 
+  /* --- UI・アクションメニュー（モーダル）の制御 --- */
+  function openActionMenu() {
+    document.getElementById('actionModal').style.display = 'flex';
+  }
+  function closeActionMenu(e) {
+    if(e) e.preventDefault();
+    document.getElementById('actionModal').style.display = 'none';
+  }
 
   /* --- 既存の機能群 --- */
   function toggleGemini() {
@@ -185,23 +167,23 @@
     btn.classList.toggle('on', geminiMode);
   }
 
-  // 【完全修正版】ブラウザを挟まず、独立した「Googleレンズ」アプリを一発起動する
+  // 【修正版】Playストア回避の最終手段：直接URL遷移に変更
   function launchNativeLens() {
+    closeActionMenu(); // モーダルを閉じる
     var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
-    var a = document.createElement('a');
-    a.href = intentUrl;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    // a.click()というプログラム操作をやめ、ブラウザ本来の移動コマンドを使用
+    window.location.href = intentUrl;
   }
 
   function openGallery() {
+    closeActionMenu();
     var input = document.getElementById('imageInput');
     input.removeAttribute('capture');
     input.click();
   }
 
   function openCamera() {
+    closeActionMenu();
     var input = document.getElementById('imageInput');
     input.setAttribute('capture', 'environment');
     input.click();
@@ -226,7 +208,6 @@
     }
   }
 
-  // 【修正済】画像送信時の横倒し補正
   function finalLensSubmit() {
     var fileInput = document.getElementById('imageInput');
     var keyword = document.getElementById('keyword').value.trim();
@@ -246,7 +227,6 @@
     var url = URL.createObjectURL(file);
     img.onload = function() {
       URL.revokeObjectURL(url); 
-      
       var canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
@@ -255,7 +235,6 @@
 
       canvas.toBlob(function(blob) {
         var correctedFile = new File([blob], "image.jpg", { type: "image/jpeg" });
-
         var form = doc.createElement('form');
         form.method = 'POST';
         form.action = 'https://lens.google.com/upload?ep=gisbubu&hl=ja&q=' + encodeURIComponent(searchKw);
