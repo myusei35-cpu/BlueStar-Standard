@@ -167,22 +167,21 @@
     btn.classList.toggle('on', geminiMode);
   }
 
-  /* ====== PATCH (レンズカメラ直接起動) ====== */
+  /* ====== PATCH (レンズ起動先を「Googleレンズ単体アプリ」へ戻す) ====== */
 
-  // 【Old Code（特殊命令が弾かれ、ちっちゃいボタンのウェブ画面に逃がされていた処理）】
+  // 【Old Code（Googleアプリ内のレンズを無理やり開こうとしてひどい挙動になった処理）】
   // function launchNativeLens() {
   //   closeActionMenu(); 
-  //   var intentUrl = 'intent://#Intent;action=com.google.android.apps.search.lens.action.LENS;package=com.google.android.googlequicksearchbox;S.browser_fallback_url=https%3A%2F%2Fwww.google.co.jp%2Fimghp;end;';
+  //   var intentUrl = 'intent://lens.google.com/#Intent;scheme=https;action=android.intent.action.VIEW;package=com.google.android.googlequicksearchbox;end;';
   //   window.location.href = intentUrl;
   // }
 
-  // 【New Code（GoogleアプリにレンズのURLを強制送達し、一撃でカメラを立ち上げる処理）】
+  // 【New Code（Googleアプリを避け、独立したGoogleレンズ単体アプリへ再び紐付ける処理）】
   function launchNativeLens() {
-    closeActionMenu(); 
+    closeActionMenu(); // モーダルを閉じる
     
-    // packageで「Googleアプリ」を名指ししつつ、開く先を「lens.google.com」に指定。
-    // これにより、Googleアプリが自動で直接レンズのカメラ画面を開きます。
-    var intentUrl = 'intent://lens.google.com/#Intent;scheme=https;action=android.intent.action.VIEW;package=com.google.android.googlequicksearchbox;end;';
+    // Playストア経由にはなりますが、Googleアプリではなく「Googleレンズ単体アプリ（com.google.ar.lens）」を確実のターゲットにします
+    var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
                     
     window.location.href = intentUrl;
   }
