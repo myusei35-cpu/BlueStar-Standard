@@ -23,7 +23,7 @@
     /* 統合されたコントロールボタン群 */
     .control-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .control-row button { flex: 1; min-width: 120px; padding: 12px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #ffffff; }
-    .btn-action-menu { background-color: #059669; font-size: 1.1em; } /* 新・統一ボタン */
+    .btn-action-menu { background-color: #059669; font-size: 1.1em; } 
     .btn-all { background-color: #475569; }
     .btn-gemini { background-color: #7c3aed; }
     
@@ -45,7 +45,6 @@
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
     .modal-btn.camera { background-color: #059669; }
-    .modal-btn.lens { background-color: #ea4335; }
     .modal-btn.cancel { background-color: transparent; border: 1px solid #64748b; color: #94a3b8; margin-bottom: 0; }
   </style>
 </head>
@@ -59,10 +58,10 @@
         <div id="suggestionBox" class="suggestion-box"></div>
       </div>
       
-      <in<input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
-<button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
-  レンズへ転送
-</button>put type="file" id="imageInput" accept="image/*" style="display:none;" onchange="finalLensSubmit()">
+      <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
+      <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
+        レンズへ転送
+      </button>
 
       <button class="btn-generate" onclick="generateLinks()">生成</button>
     </div>
@@ -80,9 +79,9 @@
 
   <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
-      <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">画像をLensへ直接転送します</h3>
-      <button class="modal-btn camera" onclick="openCamera()">📸 カメラで撮影して検索</button>
-      <button class="modal-btn" onclick="openGallery()">📁 アルバム画像から検索</button>
+      <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">画像を選択してください</h3>
+      <button class="modal-btn camera" onclick="openCamera()">📸 カメラで撮影</button>
+      <button class="modal-btn" onclick="openGallery()">📁 アルバムから選択</button>
       <button class="modal-btn cancel" onclick="closeActionMenu(event)">キャンセル</button>
     </div>
   </div>
@@ -149,30 +148,15 @@
     if (e.target !== inputField && e.target !== suggestionBox) suggestionBox.style.display = 'none';
   });
 
-  /* --- UI・アクションメニュー（モーダル）の制御 --- */
-  function openActionMenu() {
-    document.getElementById('actionModal').style.display = 'flex';
-  }
-  function closeActionMenu(e) {
-    if(e) e.preventDefault();
-    document.getElementById('actionModal').style.display = 'none';
-  }
+  function openActionMenu() { document.getElementById('actionModal').style.display = 'flex'; }
+  function closeActionMenu(e) { if(e) e.preventDefault(); document.getElementById('actionModal').style.display = 'none'; }
 
-  /* --- 既存の機能群 --- */
   function toggleGemini() {
     geminiMode = !geminiMode;
     var btn = document.getElementById('geminiToggle');
     btn.textContent = geminiMode ? 'Gemini: ON' : 'Gemini: OFF';
     btn.classList.toggle('on', geminiMode);
   }
-
-  /* ====== PATCH 3 START ====== */
-  // Old Code (保護・無効化)
-  // function launchNativeLens() {
-  //   closeActionMenu(); 
-  //   var intentUrl = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.ar.lens;end;';
-  //   window.location.href = intentUrl;
-  // }
 
   function openGallery() {
     closeActionMenu();
@@ -200,23 +184,12 @@
     document.body.removeChild(a);
   }
 
-  /* ====== PATCH 2 START ====== */
-  // 【Old Code（現在、ボタン表示機能がコメントアウトされ死んでいる状態）】
-  // function showLensSubmit() {
-  //   var fileInput = document.getElementById('imageInput');
-  //   if (fileInput.files && fileInput.files[0]) {
-  //     document.getElementById('lensSubmitBtn').style.display = 'inline-block';
-  //   }
-  // }
-
-  // 【New Code（Stable：赤いボタンを出現させる機能を復活）】
   function showLensSubmit() {
     var fileInput = document.getElementById('imageInput');
     if (fileInput.files && fileInput.files[0]) {
       document.getElementById('lensSubmitBtn').style.display = 'inline-block';
     }
   }
-  /* ====== PATCH 2 END ====== */
 
   function finalLensSubmit() {
     var fileInput = document.getElementById('imageInput');
@@ -323,6 +296,11 @@
       }
     });
   });
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
 </script>
 </body>
 </html>
