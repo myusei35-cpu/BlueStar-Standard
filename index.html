@@ -59,7 +59,10 @@
         <div id="suggestionBox" class="suggestion-box"></div>
       </div>
       
-      <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="finalLensSubmit()">
+      <in<input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
+<button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
+  レンズへ転送
+</button>put type="file" id="imageInput" accept="image/*" style="display:none;" onchange="finalLensSubmit()">
 
       <button class="btn-generate" onclick="generateLinks()">生成</button>
     </div>
@@ -197,14 +200,23 @@
     document.body.removeChild(a);
   }
 
-  // Old Code (保護・無効化)
+  /* ====== PATCH 2 START ====== */
+  // 【Old Code（現在、ボタン表示機能がコメントアウトされ死んでいる状態）】
   // function showLensSubmit() {
   //   var fileInput = document.getElementById('imageInput');
   //   if (fileInput.files && fileInput.files[0]) {
   //     document.getElementById('lensSubmitBtn').style.display = 'inline-block';
   //   }
   // }
-  /* ====== PATCH 3 END ====== */
+
+  // 【New Code（Stable：赤いボタンを出現させる機能を復活）】
+  function showLensSubmit() {
+    var fileInput = document.getElementById('imageInput');
+    if (fileInput.files && fileInput.files[0]) {
+      document.getElementById('lensSubmitBtn').style.display = 'inline-block';
+    }
+  }
+  /* ====== PATCH 2 END ====== */
 
   function finalLensSubmit() {
     var fileInput = document.getElementById('imageInput');
