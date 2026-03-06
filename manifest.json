@@ -1,18 +1,20 @@
 {
-  "name": "BlueStar Standard Hub",
-  "short_name": "StandardHub",
-  "id": "/BlueStar-Standard/", 
-  "start_url": "/BlueStar-Standard/",
-  "scope": "/BlueStar-Standard/",
+  "name": "BlueStar Research Hub",
+  "short_name": "BlueStar",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
   "icons": [
     {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzNiODJmNiIvPjxjaXJjbGUgY3g9IjI1NiIgY3k9IjI1NiIgcj0iMTUwIiBmaWxsPSIjZmZmIi8+PC9zdmc+",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
