@@ -45,7 +45,18 @@
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
     .modal-btn.camera { background-color: #059669; }
+    /* ====== Patch領域 ====== */
     .modal-btn.cancel { background-color: transparent; border: 1px solid #64748b; color: #94a3b8; margin-bottom: 0; }
+
+    /* 爆速仕入れ登録用のスタイル（Hubのダークテーマに合わせて最適化） */
+    .blustar-section { background-color: #1e293b; border-top: 4px solid #0056b3; border-radius: 12px; padding: 20px; margin-top: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
+    .blustar-section h2 { text-align: center; color: #fff; margin-bottom: 20px; font-size: 1.2em; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top: 0; }
+    .blustar-form-group { margin-bottom: 15px; }
+    .blustar-form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; color: #94a3b8; }
+    .blustar-form-group input { width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #fff; box-sizing: border-box; font-size: 16px; }
+    .btn-submit-blustar { width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,86,179,0.3); }
+    .btn-submit-blustar:disabled { background-color: #475569; box-shadow: none; }
+/* ======================= */
   </style>
 </head>
 <body>
@@ -75,6 +86,22 @@
     </div>
     
     <div class="site-list" id="siteList"></div>
+
+    <div class="blustar-section">
+      <h2>📦 爆速仕入れ登録</h2>
+      <form id="purchaseForm">
+        <div class="blustar-form-group"><label>仕入先</label><input type="text" id="vendor" placeholder="例: セカスト"></div>
+        <div class="blustar-form-group"><label>支払元</label><input type="text" id="payment" placeholder="例: クレカ"></div>
+        <div class="blustar-form-group"><label>仕入値</label><input type="number" id="price" placeholder="例: 1500"></div>
+        <div class="blustar-form-group"><label>送料</label><input type="number" id="shipping" value="0"></div>
+        <div class="blustar-form-group"><label>画像URL</label><input type="text" id="imageUrl" placeholder="画像のURLをコピペ"></div>
+        <div class="blustar-form-group"><label>商品名</label><input type="text" id="itemName" placeholder="例: NIKE パーカー"></div>
+        <div class="blustar-form-group"><label>サイズ</label><input type="text" id="size" placeholder="例: L"></div>
+        <div class="blustar-form-group"><label>型番</label><input type="text" id="model" placeholder="例: NK-1234"></div>
+        <div class="blustar-form-group"><label>状態</label><input type="text" id="condition" placeholder="例: B"></div>
+        <button type="button" class="btn-submit-blustar" id="submitBtn" onclick="sendDataToGAS()">仕入れ登録</button>
+      </form>
+    </div>
   </div>
 
   <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
@@ -291,11 +318,52 @@
           var container = new DataTransfer();
           container.items.add(file);
           fileInput.files = container.files;
-          showLensSubmit();
-        }
-      }
-    });
-  });
+          /* ====== Patch領域 ====== */
+                  showLensSubmit();
+                }
+              }
+            });
+          });
+
+          // 爆速仕入れ用のGAS送信処理
+          const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzQioxuTfTnnRkegCqoI0ZcCX7-it6rKyuc77pgpsMz-QC5YdMmQsrEPwn0ItX4wKnd/exec";
+
+          function sendDataToGAS() {
+            const btn = document.getElementById("submitBtn");
+            btn.disabled = true;
+            btn.innerText = "送信中...";
+
+            const data = {
+              vendor: document.getElementById("vendor").value,
+              payment: document.getElementById("payment").value,
+              price: document.getElementById("price").value,
+              shipping: document.getElementById("shipping").value,
+              imageUrl: document.getElementById("imageUrl").value,
+              itemName: document.getElementById("itemName").value,
+              size: document.getElementById("size").value,
+              model: document.getElementById("model").value,
+              condition: document.getElementById("condition").value
+            };
+
+            fetch(WEBHOOK_URL, {
+              method: "POST",
+              body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+              alert("✅ スプレッドシートの一番下へ登録完了しました！");
+              document.getElementById("purchaseForm").reset();
+              document.getElementById("shipping").value = "0";
+            })
+            .catch(error => {
+              alert("❌ 通信エラー: " + error);
+            })
+            .finally(() => {
+              btn.disabled = false;
+              btn.innerText = "仕入れ登録";
+            });
+          }
+/* ======================= */
 </script>
 <script>
   if ('serviceWorker' in navigator) {
