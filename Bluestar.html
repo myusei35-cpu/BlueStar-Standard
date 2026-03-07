@@ -62,11 +62,13 @@
         body: JSON.stringify(data)
       })
       .then(response => response.json())
+      /* ====== Patch領域 ====== */
       .then(result => {
-        alert("✅ スプレッドシート（16行目）へ登録完了しました！");
+        alert("✅ スプレッドシートの一番下へ登録完了しました！");
         document.getElementById("purchaseForm").reset(); // 送信後に枠を空にする
         document.getElementById("shipping").value = "0"; // 送料のみ0に戻す
       })
+/* ======================= */
       .catch(error => {
         alert("❌ 通信エラー: " + error);
       })
