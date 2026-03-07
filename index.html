@@ -1,3 +1,4 @@
+/* ====== Patch領域 ====== */
 <!DOCTYPE html>
 <html>
 <head>
@@ -20,7 +21,6 @@
     .input-row input[type="text"] { flex-grow: 1; padding: 12px 14px; border: none; border-radius: 6px; background-color: #334155; color: #f8fafc; font-size: 1em; outline: none; }
     .btn-generate { background-color: #dc2626; color: #ffffff; border: none; border-radius: 6px; padding: 12px 16px; font-weight: bold; cursor: pointer; }
     
-    /* 統合されたコントロールボタン群 */
     .control-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .control-row button { flex: 1; min-width: 120px; padding: 12px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #ffffff; }
     .btn-action-menu { background-color: #059669; font-size: 1.1em; } 
@@ -33,30 +33,29 @@
     .site-info .desc { font-size: 0.82em; color: #94a3b8; }
     .site-card button { background-color: #2563eb; border: none; border-radius: 6px; padding: 8px 14px; color: #ffffff; font-weight: bold; }
     
-    /* サジェスト（2万件）リスト */
     .suggestion-box { position: absolute; top: 100%; left: 0; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; max-height: 200px; overflow-y: auto; display: none; }
     .suggestion-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #334155; color: #f8fafc; }
     .suggestion-item:last-child { border-bottom: none; }
     .suggestion-item:active { background-color: #334155; }
 
-    /* ====== 新機能：アクション選択画面（モーダル） ====== */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
     .modal-content { background-color: #1e293b; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; box-sizing: border-box; text-align: center; animation: slideUp 0.3s ease-out; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
     .modal-btn.camera { background-color: #059669; }
-    /* ====== Patch領域 ====== */
     .modal-btn.cancel { background-color: transparent; border: 1px solid #64748b; color: #94a3b8; margin-bottom: 0; }
 
-    /* 爆速仕入れ登録用のスタイル（Hubのダークテーマに合わせて最適化） */
-    .blustar-section { background-color: #1e293b; border-top: 4px solid #0056b3; border-radius: 12px; padding: 20px; margin-top: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
-    .blustar-section h2 { text-align: center; color: #fff; margin-bottom: 20px; font-size: 1.2em; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top: 0; }
-    .blustar-form-group { margin-bottom: 15px; }
+    /* ====== 新機能：仕入れ登録ポップアップ用スタイル ====== */
+    .blustar-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 3000; }
+    .blustar-content { background-color: #1e293b; width: 90%; max-width: 500px; border-radius: 12px; padding: 20px; box-sizing: border-box; position: relative; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); animation: popIn 0.2s ease-out; }
+    @keyframes popIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .blustar-close { position: absolute; top: 12px; right: 15px; color: #94a3b8; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
+    .blustar-content h2 { text-align: center; color: #fff; margin-top: 0; margin-bottom: 20px; font-size: 1.2em; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+    .blustar-form-group { margin-bottom: 15px; text-align: left; }
     .blustar-form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; color: #94a3b8; }
     .blustar-form-group input { width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #fff; box-sizing: border-box; font-size: 16px; }
     .btn-submit-blustar { width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,86,179,0.3); }
     .btn-submit-blustar:disabled { background-color: #475569; box-shadow: none; }
-/* ======================= */
   </style>
 </head>
 <body>
@@ -83,11 +82,24 @@
       <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
       <button class="btn-all" onclick="openAll()">全サイト</button>
       <button id="geminiToggle" class="btn-gemini" onclick="toggleGemini()">Gemini: OFF</button>
+      <button onclick="openBlustarModal()" style="flex-basis: 100%; background-color: #0056b3; margin-top: 5px; padding: 15px; font-size: 1.1em; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">📦 爆速仕入れ登録を開く</button>
     </div>
     
     <div class="site-list" id="siteList"></div>
+  </div>
 
-    <div class="blustar-section">
+  <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">画像を選択してください</h3>
+      <button class="modal-btn camera" onclick="openCamera()">📸 カメラで撮影</button>
+      <button class="modal-btn" onclick="openGallery()">📁 アルバムから選択</button>
+      <button class="modal-btn cancel" onclick="closeActionMenu(event)">キャンセル</button>
+    </div>
+  </div>
+
+  <div id="blustarModal" class="blustar-modal-overlay" onclick="closeBlustarModal(event)">
+    <div class="blustar-content" onclick="event.stopPropagation()">
+      <span class="blustar-close" onclick="closeBlustarModal()">&times;</span>
       <h2>📦 爆速仕入れ登録</h2>
       <form id="purchaseForm">
         <div class="blustar-form-group"><label>仕入先</label><input type="text" id="vendor" placeholder="例: セカスト"></div>
@@ -104,17 +116,8 @@
     </div>
   </div>
 
-  <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">画像を選択してください</h3>
-      <button class="modal-btn camera" onclick="openCamera()">📸 カメラで撮影</button>
-      <button class="modal-btn" onclick="openGallery()">📁 アルバムから選択</button>
-      <button class="modal-btn cancel" onclick="closeActionMenu(event)">キャンセル</button>
-    </div>
-  </div>
-
 <script>
-  /* ====== STABLE (完全統合版プログラム) ====== */
+  /* ====== STABLE (既存の機能すべて維持) ====== */
   var geminiMode = false;
 
   let brandDictionary = []; 
@@ -318,52 +321,61 @@
           var container = new DataTransfer();
           container.items.add(file);
           fileInput.files = container.files;
-          /* ====== Patch領域 ====== */
-                  showLensSubmit();
-                }
-              }
-            });
-          });
+          showLensSubmit();
+        }
+      }
+    });
+  });
 
-          // 爆速仕入れ用のGAS送信処理
-          const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzQioxuTfTnnRkegCqoI0ZcCX7-it6rKyuc77pgpsMz-QC5YdMmQsrEPwn0ItX4wKnd/exec";
+  /* ====== 新機能：ポップアップ開閉用プログラム ====== */
+  function openBlustarModal() {
+    document.getElementById('blustarModal').style.display = 'flex';
+  }
+  
+  function closeBlustarModal(e) {
+    if (e && e.target !== document.getElementById('blustarModal')) return;
+    document.getElementById('blustarModal').style.display = 'none';
+  }
 
-          function sendDataToGAS() {
-            const btn = document.getElementById("submitBtn");
-            btn.disabled = true;
-            btn.innerText = "送信中...";
+  /* ====== 爆速仕入れ用のGAS送信プログラム ====== */
+  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzQioxuTfTnnRkegCqoI0ZcCX7-it6rKyuc77pgpsMz-QC5YdMmQsrEPwn0ItX4wKnd/exec";
 
-            const data = {
-              vendor: document.getElementById("vendor").value,
-              payment: document.getElementById("payment").value,
-              price: document.getElementById("price").value,
-              shipping: document.getElementById("shipping").value,
-              imageUrl: document.getElementById("imageUrl").value,
-              itemName: document.getElementById("itemName").value,
-              size: document.getElementById("size").value,
-              model: document.getElementById("model").value,
-              condition: document.getElementById("condition").value
-            };
+  function sendDataToGAS() {
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.innerText = "送信中...";
 
-            fetch(WEBHOOK_URL, {
-              method: "POST",
-              body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-              alert("✅ スプレッドシートの一番下へ登録完了しました！");
-              document.getElementById("purchaseForm").reset();
-              document.getElementById("shipping").value = "0";
-            })
-            .catch(error => {
-              alert("❌ 通信エラー: " + error);
-            })
-            .finally(() => {
-              btn.disabled = false;
-              btn.innerText = "仕入れ登録";
-            });
-          }
-/* ======================= */
+    const data = {
+      vendor: document.getElementById("vendor").value,
+      payment: document.getElementById("payment").value,
+      price: document.getElementById("price").value,
+      shipping: document.getElementById("shipping").value,
+      imageUrl: document.getElementById("imageUrl").value,
+      itemName: document.getElementById("itemName").value,
+      size: document.getElementById("size").value,
+      model: document.getElementById("model").value,
+      condition: document.getElementById("condition").value
+    };
+
+    fetch(WEBHOOK_URL, {
+      method: "POST",
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+      alert("✅ スプレッドシートの一番下へ登録完了しました！");
+      document.getElementById("purchaseForm").reset();
+      document.getElementById("shipping").value = "0";
+      closeBlustarModal(); // 送信成功時にポップアップを自動で閉じる
+    })
+    .catch(error => {
+      alert("❌ 通信エラー: " + error);
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerText = "仕入れ登録";
+    });
+  }
 </script>
 <script>
   if ('serviceWorker' in navigator) {
@@ -372,3 +384,4 @@
 </script>
 </body>
 </html>
+/* ======================= */
