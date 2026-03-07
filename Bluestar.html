@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BlueStar 爆速仕入れ</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; }
+    .container { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+    h2 { text-align: center; color: #333; margin-top: 0; font-size: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; color: #555; }
+    input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+    
+    /* 変更指示のあった「仕入れ登録」ボタン */
+    .submit-btn { width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,86,179,0.3); }
+    .submit-btn:disabled { background-color: #a0c4e8; box-shadow: none; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>BlueStar</h2>
+    <form id="purchaseForm">
+      <div class="form-group"><label>仕入先</label><input type="text" id="vendor" placeholder="例: セカスト"></div>
+      <div class="form-group"><label>支払元</label><input type="text" id="payment" placeholder="例: クレカ"></div>
+      <div class="form-group"><label>仕入値</label><input type="number" id="price" placeholder="例: 1500"></div>
+      <div class="form-group"><label>送料</label><input type="number" id="shipping" value="0"></div>
+      <div class="form-group"><label>画像URL</label><input type="text" id="imageUrl" placeholder="画像のURLをコピペ"></div>
+      <div class="form-group"><label>商品名</label><input type="text" id="itemName" placeholder="例: NIKE パーカー"></div>
+      <div class="form-group"><label>サイズ</label><input type="text" id="size" placeholder="例: L"></div>
+      <div class="form-group"><label>型番</label><input type="text" id="model" placeholder="例: NK-1234"></div>
+      <div class="form-group"><label>状態</label><input type="text" id="condition" placeholder="例: B"></div>
+
+      <button type="button" class="submit-btn" id="submitBtn" onclick="sendData()">仕入れ登録</button>
+    </form>
+  </div>
+
+  <script>
+    // 先ほど発行した本物のURL
+    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzQioxuTfTnnRkegCqoI0ZcCX7-it6rKyuc77pgpsMz-QC5YdMmQsrEPwn0ItX4wKnd/exec";
+
+    function sendData() {
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.innerText = "送信中...";
+
+      const data = {
+        vendor: document.getElementById("vendor").value,
+        payment: document.getElementById("payment").value,
+        price: document.getElementById("price").value,
+        shipping: document.getElementById("shipping").value,
+        imageUrl: document.getElementById("imageUrl").value,
+        itemName: document.getElementById("itemName").value,
+        size: document.getElementById("size").value,
+        model: document.getElementById("model").value,
+        condition: document.getElementById("condition").value
+      };
+
+      fetch(WEBHOOK_URL, {
+        method: "POST",
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(result => {
+        alert("✅ スプレッドシート（16行目）へ登録完了しました！");
+        document.getElementById("purchaseForm").reset(); // 送信後に枠を空にする
+        document.getElementById("shipping").value = "0"; // 送料のみ0に戻す
+      })
+      .catch(error => {
+        alert("❌ 通信エラー: " + error);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerText = "仕入れ登録";
+      });
+    }
+  </script>
+
+</body>
+</html>
