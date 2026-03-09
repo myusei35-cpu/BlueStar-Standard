@@ -1,4 +1,4 @@
-/* ====== FROZEN ====== */
+<!--======始点:FROZEN======-->
 <!DOCTYPE html>
 <html>
 <head>
@@ -44,18 +44,19 @@
     .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
     .modal-btn.camera { background-color: #059669; }
     .modal-btn.cancel { background-color: transparent; border: 1px solid #64748b; color: #94a3b8; margin-bottom: 0; }
-  </style>
+/* ========== */
+ 
+ </style>
 </head>
 <body>
   <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB</div>
-/* ========== */
+<!--======終点:FROZEN======-->
 
 
 
 
 
-
-/* ====== PATCH ====== */
+<!--======始点:PATCH======-->
 <div class="container">
     <div class="alert" id="alert"></div>
     <div class="site-list" id="siteList"></div>
@@ -79,8 +80,11 @@
       </button>
     </div>
   </div>
+  <!--======終点:PATCH======-->
+
 
   <script>
+  //======始点: PATCH======
   function generateLinks() {
     var keyword = document.getElementById('keyword').value.trim();
     var alertEl = document.getElementById('alert');
@@ -92,6 +96,7 @@
     alertEl.style.display = 'none';
     var encoded = encodeURIComponent(keyword);
     
+    // 修正2：配列の順序を変更
     var sites = [
       { title: 'トレファク', desc: '店舗在庫', url: 'https://www.trefac.jp/search?q=' + encoded },
       { title: 'カインドオル', desc: 'ブランド古着', url: 'https://shop.kind.co.jp/search?keyword=' + encoded },
@@ -114,8 +119,10 @@
       openFinalURL('https://gemini.google.com/app?q=' + encodeURIComponent(prompt));
     }
   }
-  </script>
-/* ========== */
+  // 修正3：不要なGAS連携コード（openBlustarModal、sendDataToGAS等）は完全に削除済み
+  //======終点: PATCH======
+
+  </script>/* ========== */
 
 
 
