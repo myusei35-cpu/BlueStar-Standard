@@ -57,30 +57,35 @@
 
 
 <!--======始点:PATCH======-->
-<div class="container">
-    <div class="input-row">
-      <button class="btn-generate" onclick="generateLinks()">生成</button>
-
-      <div style="position: relative; flex: 1; display: flex;">
-        <input id="keyword" type="text" placeholder="キーワードを入力" autocomplete="off" />
-        <span onclick="document.getElementById('keyword').value=''; document.getElementById('suggestionBox').style.display='none';" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;">❌</span>
-        <div id="suggestionBox" class="suggestion-box"></div>
-      </div>
-      
-      <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
-      <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
-        レンズへ転送
-      </button>
-    </div>
-
+<div class="container" style="display: flex; flex-direction: column; height: 85vh;">
     <div class="alert" id="alert"></div>
     
-    <div class="control-row">
-      <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
+    <div class="site-list" id="siteList" style="flex-grow: 1; overflow-y: auto;"></div>
+
+    <div style="margin-top: auto; padding-top: 15px;">
+      
+      <div class="control-row">
+        <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
+      </div>
+
+      <div class="input-row">
+        <button class="btn-generate" onclick="generateLinks()">生成</button>
+
+        <div style="position: relative; flex: 1; display: flex;">
+          <input id="keyword" type="text" placeholder="キーワードを入力" autocomplete="off" />
+          <span onclick="document.getElementById('keyword').value=''; document.getElementById('suggestionBox').style.display='none';" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;">❌</span>
+          <div id="suggestionBox" class="suggestion-box"></div>
+        </div>
+        
+        <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
+        <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
+          レンズへ転送
+        </button>
+      </div>
+
     </div>
-    
-    <div class="site-list" id="siteList"></div>
-  </div>  <!--======終点:PATCH======-->
+    </div>
+  <!--======終点:PATCH======-->
 
 
   <script>
