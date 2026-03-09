@@ -1,158 +1,327 @@
+/* ====== FROZEN ====== */
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
+  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>★ 予測検索テスト（本番環境とは完全に独立）</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="https://myusei35-cpu.github.io/BlueStar-Standard/manifest.json">
+  <title>BlueStar Research Hub</title>
+
   <style>
-    /* ====== FROZEN (UI・スタイル領域：完成済み) ====== */
-    body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
-    .header { text-align: center; margin-bottom: 20px; }
-    .header h3 { color: #f59e0b; margin: 0 0 5px 0; }
-    .header p { font-size: 12px; color: #94a3b8; margin: 0; }
+    /* ====== FROZEN (スタイル保護) ====== */
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    .header { background-color: #1e293b; padding: 15px; text-align: center; font-size: 1.4em; font-weight: bold; }
+    .header span.star { color: #f59e0b; margin-right: 6px; }
+    .container { max-width: 640px; margin: 20px auto; padding: 0 20px; }
+    .input-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
+    .input-row input[type="text"] { flex-grow: 1; padding: 12px 14px; border: none; border-radius: 6px; background-color: #334155; color: #f8fafc; font-size: 1em; outline: none; }
+    .btn-generate { background-color: #dc2626; color: #ffffff; border: none; border-radius: 6px; padding: 12px 16px; font-weight: bold; cursor: pointer; }
     
-    .input-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
+    .control-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .control-row button { flex: 1; min-width: 120px; padding: 12px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #ffffff; }
+    .btn-action-menu { background-color: #059669; font-size: 1.1em; } 
+    .btn-all { background-color: #475569; }
+    .btn-gemini { background-color: #7c3aed; }
     
-    input[type="text"] { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #334155; background-color: #1e293b; color: #fff; font-size: 16px; outline: none; box-sizing: border-box; }
+    .alert { color: #f87171; margin-bottom: 15px; display: none; }
+    .site-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .site-info .title { font-weight: bold; margin-bottom: 4px; }
+    .site-info .desc { font-size: 0.82em; color: #94a3b8; }
+    .site-card button { background-color: #2563eb; border: none; border-radius: 6px; padding: 8px 14px; color: #ffffff; font-weight: bold; }
     
-    .suggestion-box { position: absolute; top: 100%; left: 0; width: 100%; max-height: 250px; overflow-y: auto; background-color: #1e293b; border: 1px solid #475569; border-top: none; border-radius: 0 0 8px 8px; z-index: 9999; display: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
-    
-    .suggestion-item { padding: 16px 15px; border-bottom: 1px solid #334155; color: #f8fafc; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .suggestion-box { position: absolute; top: 100%; left: 0; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; max-height: 200px; overflow-y: auto; display: none; }
+    .suggestion-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #334155; color: #f8fafc; }
+    .suggestion-item:last-child { border-bottom: none; }
     .suggestion-item:active { background-color: #334155; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
+    .modal-content { background-color: #1e293b; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; box-sizing: border-box; text-align: center; animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
+    .modal-btn.camera { background-color: #059669; }
+    .modal-btn.cancel { background-color: transparent; border: 1px solid #64748b; color: #94a3b8; margin-bottom: 0; }
   </style>
 </head>
 <body>
+  <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB</div>
+/* ========== */
 
-  <div class="header">
-    <h3>★ 予測検索テスト</h3>
-    <p>本番環境(index.html)とは完全に独立しています</p>
+
+
+
+
+
+/* ====== PATCH ====== */
+<div class="container">
+    <div class="alert" id="alert"></div>
+    <div class="site-list" id="siteList"></div>
+
+    <div class="control-row">
+      <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
+    </div>
+
+    <div class="input-row">
+      <button class="btn-generate" onclick="generateLinks()">生成</button>
+
+      <div style="position: relative; flex: 1; display: flex;">
+        <input id="keyword" type="text" placeholder="キーワードを入力" autocomplete="off" />
+        <span onclick="document.getElementById('keyword').value=''; document.getElementById('suggestionBox').style.display='none';" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;">❌</span>
+        <div id="suggestionBox" class="suggestion-box"></div>
+      </div>
+      
+      <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
+      <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
+        レンズへ転送
+      </button>
+    </div>
   </div>
-
-  <div class="input-container">
-    <input type="text" id="testKeyword" placeholder="ブランド名を入力（例：ば）" autocomplete="off">
-    <div id="suggestionBox" class="suggestion-box"></div>
-  </div>
-
-  <p style="font-size: 14px; margin-top: 30px; color: #cbd5e1;">
-    【テスト方法】<br>
-    「ば」と打つと「バーバリー」などカタカナのみが出ます。<br>
-    「b」と打つと「BURBERRY」などアルファベットのみが出ます。
-  </p>
 
   <script>
-    /* ====== FROZEN (要素取得とUI制御: 完全に仕上がった聖域) ====== */
-    const inputField = document.getElementById('testKeyword');
-    const suggestionBox = document.getElementById('suggestionBox');
-
-    // 画面外タップで閉じる処理（誤動作防止）
-    document.addEventListener('touchstart', function(e) {
-      if (e.target !== inputField && !suggestionBox.contains(e.target)) {
-        suggestionBox.style.display = 'none';
-      }
-    });
-    document.addEventListener('click', function(e) {
-      if (e.target !== inputField && !suggestionBox.contains(e.target)) {
-        suggestionBox.style.display = 'none';
-      }
-    });
-
-
-    /* ====== PATCH (CSV読み込み修正テスト: STABLEから降格) ====== */
-    let brandDictionary = []; 
-
-    fetch('brand.csv')
-      .then(response => response.text())
-      .then(text => {
-        const lines = text.split('\n');
-        lines.forEach(line => {
-          if (!line.trim()) return;
-          const cols = line.split(','); 
-          
-          // ▼▼▼ 今回の修正箇所（Old/New分離） ▼▼▼
-          // 【Old Code（A列・B列を見ていた＆全角スペースに無防備だった）】
-          // const nameEn = cols[0] ? cols[0].replace(/"/g, '').trim() : "";
-          // const nameKana = cols[1] ? cols[1].replace(/"/g, '').trim() : "";
-          
-          // 【New Code（B列・C列を正確に狙撃し、前後の全角・半角スペースを完全破壊）】
-          // ※プログラムの世界ではA列=0、B列=1、C列=2と数えます
-          const nameEn = cols[1] ? cols[1].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
-          const nameKana = cols[2] ? cols[2].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
-          // ▲▲▲ ここまで ▲▲▲
-          
-          if(nameEn || nameKana) {
-            brandDictionary.push({ en: nameEn, kana: nameKana });
-          }
-        });
-        console.log("ブランド辞書の読み込み完了: " + brandDictionary.length + "件");
-      })
-      .catch(error => console.error('CSVの読み込みエラー:', error));
-
-    // 【変換ツール】ひらがなをカタカナに変換する機能
-    function hiraToKata(str) {
-      return str.replace(/[\u3041-\u3096]/g, function(match) {
-        var chr = match.charCodeAt(0) + 0x60;
-        return String.fromCharCode(chr);
-      });
+  function generateLinks() {
+    var keyword = document.getElementById('keyword').value.trim();
+    var alertEl = document.getElementById('alert');
+    if (!keyword) {
+      alertEl.textContent = 'キーワードを入力してください';
+      alertEl.style.display = 'block';
+      return;
     }
-    /* ====== PATCH END ====== */
+    alertEl.style.display = 'none';
+    var encoded = encodeURIComponent(keyword);
+    
+    var sites = [
+      { title: 'トレファク', desc: '店舗在庫', url: 'https://www.trefac.jp/search?q=' + encoded },
+      { title: 'カインドオル', desc: 'ブランド古着', url: 'https://shop.kind.co.jp/search?keyword=' + encoded },
+      { title: 'セカンドストリート', desc: '店舗在庫', url: 'https://www.2ndstreet.jp/search?keyword=' + encoded },
+      { title: 'ヤフオク', desc: '落札相場', url: 'https://auctions.yahoo.co.jp/search/search?p=' + encoded + '&stf=1&s1=new&o1=d' },
+      { title: 'メルカリ：販売中', desc: 'ライバル確認', url: 'https://jp.mercari.com/search?keyword=' + encoded + '&status=on_sale&item_condition_id=3&seller_type=0&sort=created_at&order=desc' },
+      { title: 'メルカリ：売り切れ', desc: '相場確認', url: 'https://jp.mercari.com/search?keyword=' + encoded + '&status=sold_out&item_condition_id=3&seller_type=0&sort=created_at&order=desc' }
+    ];
 
-    /* ====== PATCH (棲み分け＆ドリルダウン検索ロジック: 今回の修正・テストエリア) ====== */
-    inputField.addEventListener('input', function() {
-      const val = this.value;
-      suggestionBox.innerHTML = ''; 
+    var listEl = document.getElementById('siteList');
+    listEl.innerHTML = '';
+    sites.forEach(function(site) {
+      var card = document.createElement('div');
+      card.className = 'site-card';
+      card.innerHTML = '<div class="site-info"><div class="title">' + site.title + '</div><div class="desc">' + site.desc + '</div></div><button onclick="openFinalURL(\'' + site.url + '\')">開く</button>';
+      listEl.appendChild(card);
+    });
+    if (typeof geminiMode !== 'undefined' && geminiMode) {
+      var prompt = 'あなたはプロの物販セラーです。最新の相場を検索して報告してください。回答は必ず指定のテンプレートを遵守してください。\n商品名：' + keyword;
+      openFinalURL('https://gemini.google.com/app?q=' + encodeURIComponent(prompt));
+    }
+  }
+  </script>
+/* ========== */
 
-      if (!val) {
-        suggestionBox.style.display = 'none';
-        return;
-      }
 
-      // 【棲み分け判定】
-      const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
-      let matches = [];
 
-      // ▼▼▼ 今回の修正箇所（Old/New分離） ▼▼▼
-      if (isEnglishInput) {
-        // 【Old Code（部分一致：連動しない原因）】
-        // const lowerVal = val.toLowerCase();
-        // matches = brandDictionary.filter(b => b.en.toLowerCase().includes(lowerVal)).map(b => b.en);
-        
-        // 【New Code（前方一致：ドリルダウンの実現）】
-        const lowerVal = val.toLowerCase();
-        matches = brandDictionary
-          .filter(b => b.en.toLowerCase().startsWith(lowerVal))
-          .map(b => b.en); 
-      } else {
-        // 【Old Code（部分一致：連動しない原因）】
-        // const kataVal = hiraToKata(val);
-        // matches = brandDictionary.filter(b => b.kana.includes(kataVal)).map(b => b.kana);
-        
-        // 【New Code（前方一致：ドリルダウンの実現）】
-        const kataVal = hiraToKata(val);
-        matches = brandDictionary
-          .filter(b => b.kana.startsWith(kataVal))
-          .map(b => b.kana); 
-      }
-      // ▲▲▲ ここまで ▲▲▲
 
-      // 画面表示処理（一切変更なし・安定稼働）
-      if (matches.length > 0) {
-        matches.forEach(brandName => {
-          const div = document.createElement('div');
-          div.className = 'suggestion-item';
-          div.textContent = brandName; 
-          
-          div.onclick = function() {
-            inputField.value = brandName; 
-            suggestionBox.style.display = 'none'; 
-          };
-          suggestionBox.appendChild(div);
-        });
-        suggestionBox.style.display = 'block'; 
-      } else {
-        suggestionBox.style.display = 'none'; 
+
+
+
+
+/* ====== STABLE ====== */
+  <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">画像を選択してください</h3>
+      <button class="modal-btn camera" onclick="openCamera()">📸 カメラで撮影</button>
+      <button class="modal-btn" onclick="openGallery()">📁 アルバムから選択</button>
+      <button class="modal-btn cancel" onclick="closeActionMenu(event)">キャンセル</button>
+    </div>
+  </div>
+
+  <script>
+  var geminiMode = false;
+
+  let brandDictionary = []; 
+  fetch('brand.csv')
+    .then(response => response.text())
+    .then(text => {
+      const lines = text.split('\n');
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        const cols = line.split(','); 
+        const nameEn = cols[1] ? cols[1].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
+        const nameKana = cols[2] ? cols[2].replace(/"/g, '').replace(/^[　\s]+|[　\s]+$/g, '') : "";
+        if(nameEn || nameKana) brandDictionary.push({ en: nameEn, kana: nameKana });
+      });
+    })
+    .catch(error => console.error('CSVエラー:', error));
+
+  function hiraToKata(str) {
+    return str.replace(/[\u3041-\u3096]/g, function(match) {
+      return String.fromCharCode(match.charCodeAt(0) + 0x60);
+    });
+  }
+
+  const inputField = document.getElementById('keyword');
+  const suggestionBox = document.getElementById('suggestionBox');
+
+  inputField.addEventListener('input', function() {
+    const val = this.value;
+    suggestionBox.innerHTML = ''; 
+    if (!val) { suggestionBox.style.display = 'none'; return; }
+
+    const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
+    let matches = [];
+
+    if (isEnglishInput) {
+      const lowerVal = val.toLowerCase();
+      matches = brandDictionary.filter(b => b.en.toLowerCase().startsWith(lowerVal)).map(b => b.en); 
+    } else {
+      const kataVal = hiraToKata(val);
+      matches = brandDictionary.filter(b => b.kana.startsWith(kataVal)).map(b => b.kana); 
+    }
+
+    if (matches.length > 0) {
+      matches.forEach(brandName => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.textContent = brandName; 
+        div.onclick = function() { inputField.value = brandName; suggestionBox.style.display = 'none'; };
+        suggestionBox.appendChild(div);
+      });
+      suggestionBox.style.display = 'block'; 
+    } else {
+      suggestionBox.style.display = 'none'; 
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (e.target !== inputField && e.target !== suggestionBox) suggestionBox.style.display = 'none';
+  });
+
+  function openActionMenu() { document.getElementById('actionModal').style.display = 'flex'; }
+  function closeActionMenu(e) { if(e) e.preventDefault(); document.getElementById('actionModal').style.display = 'none'; }
+
+  function toggleGemini() {
+    geminiMode = !geminiMode;
+    var btn = document.getElementById('geminiToggle');
+    if (btn) {
+      btn.textContent = geminiMode ? 'Gemini: ON' : 'Gemini: OFF';
+      btn.classList.toggle('on', geminiMode);
+    }
+  }
+
+  function openGallery() {
+    closeActionMenu();
+    var input = document.getElementById('imageInput');
+    input.removeAttribute('capture');
+    input.click();
+  }
+
+  function openCamera() {
+    closeActionMenu();
+    var input = document.getElementById('imageInput');
+    input.setAttribute('capture', 'environment');
+    input.click();
+  }
+
+  function openFinalURL(url) {
+    var targetPath = url.replace(/^https?:\/\//, '');
+    var intentUrl = (url.indexOf('mercari.com') !== -1) 
+      ? 'intent://' + targetPath + '#Intent;scheme=https;package=com.kouzoh.mercari;end;'
+      : 'intent://' + targetPath + '#Intent;scheme=https;end;';
+    var a = document.createElement('a');
+    a.href = intentUrl;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function showLensSubmit() {
+    var fileInput = document.getElementById('imageInput');
+    if (fileInput.files && fileInput.files[0]) {
+      document.getElementById('lensSubmitBtn').style.display = 'inline-block';
+    }
+  }
+
+  function finalLensSubmit() {
+    var fileInput = document.getElementById('imageInput');
+    var keyword = document.getElementById('keyword').value.trim();
+    if (!fileInput.files || !fileInput.files[0]) return;
+
+    var searchKw = keyword ? keyword + " メルカリ" : "メルカリ";
+    var file = fileInput.files[0];
+
+    var newWin = window.open('', '_blank');
+    if (!newWin) return alert('ポップアップを許可してください');
+    var doc = newWin.document;
+    doc.open();
+    doc.write('<html><head><meta name="referrer" content="no-referrer"></head><body style="background:#0f172a; color:#fff; text-align:center; padding-top:20%;"><p>画像を最適化してLensへ転送中...</p></body></html>');
+    doc.close();
+
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url); 
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      canvas.toBlob(function(blob) {
+        var correctedFile = new File([blob], "image.jpg", { type: "image/jpeg" });
+        var form = doc.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://lens.google.com/upload?ep=gisbubu&hl=ja&q=' + encodeURIComponent(searchKw);
+        form.enctype = 'multipart/form-data';
+
+        var dataInput = doc.createElement('input');
+        dataInput.type = 'file';
+        dataInput.name = 'encoded_image';
+
+        var container = new DataTransfer();
+        container.items.add(correctedFile);
+        dataInput.files = container.files;
+
+        form.appendChild(dataInput);
+        doc.body.appendChild(form);
+        form.submit();
+
+        document.getElementById('lensSubmitBtn').style.display = 'none';
+        fileInput.value = '';
+      }, 'image/jpeg', 0.9);
+    };
+    img.src = url;
+  }
+
+  window.addEventListener('load', function() {
+    var params = new URLSearchParams(window.location.search);
+    var kw = params.get('keyword');
+    if (kw) { document.getElementById('keyword').value = decodeURIComponent(kw); }
+
+    document.addEventListener('paste', function(e) {
+      if (!e.clipboardData || !e.clipboardData.items) return;
+      var items = e.clipboardData.items;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          var file = items[i].getAsFile();
+          var fileInput = document.getElementById('imageInput');
+          var container = new DataTransfer();
+          container.items.add(file);
+          fileInput.files = container.files;
+          showLensSubmit();
+        }
       }
     });
-/* ====== PATCH END ====== */
+  });
   </script>
+  
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+  </script>
+/* ========== */
 </body>
 </html>
+
+
+
+
