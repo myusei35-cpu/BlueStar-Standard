@@ -58,13 +58,6 @@
 
 <!--======始点:PATCH======-->
 <div class="container">
-    <div class="alert" id="alert"></div>
-    <div class="site-list" id="siteList"></div>
-
-    <div class="control-row">
-      <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
-    </div>
-
     <div class="input-row">
       <button class="btn-generate" onclick="generateLinks()">生成</button>
 
@@ -79,8 +72,15 @@
         レンズへ転送
       </button>
     </div>
-  </div>
-  <!--======終点:PATCH======-->
+
+    <div class="alert" id="alert"></div>
+    
+    <div class="control-row">
+      <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
+    </div>
+    
+    <div class="site-list" id="siteList"></div>
+  </div>  <!--======終点:PATCH======-->
 
 
   <script>
@@ -131,7 +131,7 @@
 
 
 
-/* ====== STABLE ====== */
+<!--======始点:STABLE======-->
   <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">画像を選択してください</h3>
@@ -325,7 +325,7 @@
     navigator.serviceWorker.register('sw.js');
   }
   </script>
-/* ========== */
+<!--======終点:STABLE======-->
 </body>
 </html>
 
