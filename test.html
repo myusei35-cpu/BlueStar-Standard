@@ -55,13 +55,17 @@
     }
 
     /* ボトムパネルのすりガラス（白を混ぜて光らせる） */
+    /* 【修正】ボトムパネル：キーボードめり込み対策と、すりガラスの確実な発動 */
     .bottom-panel {
       position: fixed; bottom: 0; left: 0; width: 100%;
-      background: rgba(255, 255, 255, 0.05); 
-      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); 
-      border-top: 1px solid rgba(255,255,255,0.2);
+      /* 白ではなく「暗い紺色の半透明」にすることで、濁らずに透けさせます */
+      background: rgba(15, 23, 42, 0.4); 
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 24px 24px 0 0;
-      padding: 20px 20px 35px 20px; box-sizing: border-box; z-index: 1000;
+      /* キーボードが出た時に下敷きにならないよう、下部の分厚い余白を削りました */
+      padding: 16px; 
+      box-sizing: border-box; z-index: 1000;
       box-shadow: 0 -4px 30px rgba(0,0,0,0.6);
     }
 
