@@ -147,14 +147,32 @@
     alertEl.style.display = 'none';
     var encoded = encodeURIComponent(keyword);
     
-    // 修正2：配列の順序を変更
+    // 【修正】各サイトのデータに、専用の「ロゴマーク（iconHtml）」を追加しました
     var sites = [
-      { title: 'トレファク', desc: '店舗在庫', url: 'https://www.trefac.jp/search?q=' + encoded },
-      { title: 'カインドオル', desc: 'ブランド古着', url: 'https://shop.kind.co.jp/search?keyword=' + encoded },
-      { title: 'セカンドストリート', desc: '店舗在庫', url: 'https://www.2ndstreet.jp/search?keyword=' + encoded },
-      { title: 'ヤフオク', desc: '落札相場', url: 'https://auctions.yahoo.co.jp/search/search?p=' + encoded + '&stf=1&s1=new&o1=d' },
-      { title: 'メルカリ：販売中', desc: 'ライバル確認', url: 'https://jp.mercari.com/search?keyword=' + encoded + '&status=on_sale&item_condition_id=3&seller_type=0&sort=created_at&order=desc' },
-      { title: 'メルカリ：売り切れ', desc: '相場確認', url: 'https://jp.mercari.com/search?keyword=' + encoded + '&status=sold_out&item_condition_id=3&seller_type=0&sort=created_at&order=desc' }
+      { 
+        title: 'トレファク', desc: '店舗在庫', url: 'https://www.trefac.jp/search?q=' + encoded,
+        iconHtml: '<div style="width: 44px; height: 44px; border-radius: 10px; background: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #1e3a8a; font-size: 14px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">TF</div>'
+      },
+      { 
+        title: 'カインドオル', desc: 'ブランド古着', url: 'https://shop.kind.co.jp/search?keyword=' + encoded,
+        iconHtml: '<div style="width: 44px; height: 44px; border-radius: 10px; background: #000000; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #ffffff; font-size: 18px; font-family: serif; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">K</div>'
+      },
+      { 
+        title: 'セカンドストリート', desc: '店舗在庫', url: 'https://www.2ndstreet.jp/search?keyword=' + encoded,
+        iconHtml: '<div style="width: 44px; height: 44px; border-radius: 10px; background: #1e3a8a; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #ef4444; font-size: 13px; border: 1px solid #3b82f6; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">2nd</div>'
+      },
+      { 
+        title: 'ヤフオク', desc: '落札相場', url: 'https://auctions.yahoo.co.jp/search/search?p=' + encoded + '&stf=1&s1=new&o1=d',
+        iconHtml: '<div style="width: 44px; height: 44px; border-radius: 10px; background: #facc15; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #ef4444; font-size: 18px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Y!</div>'
+      },
+      { 
+        title: 'メルカリ：販売中', desc: 'ライバル確認', url: 'https://jp.mercari.com/search?keyword=' + encoded + '&status=on_sale&item_condition_id=3&seller_type=0&sort=created_at&order=desc',
+        iconHtml: '<div style="width: 44px; height: 44px; border-radius: 10px; background: #ef4444; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #ffffff; font-size: 22px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">m</div>'
+      },
+      { 
+        title: 'メルカリ：売り切れ', desc: '相場確認', url: 'https://jp.mercari.com/search?keyword=' + encoded + '&status=sold_out&item_condition_id=3&seller_type=0&sort=created_at&order=desc',
+        iconHtml: '<div style="width: 44px; height: 44px; border-radius: 10px; background: #ef4444; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #ffffff; font-size: 22px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">m</div>'
+      }
     ];
 
     var listEl = document.getElementById('siteList');
@@ -162,9 +180,21 @@
     sites.forEach(function(site) {
       var card = document.createElement('div');
       card.className = 'site-card';
-      card.innerHTML = '<div class="site-info"><div class="title">' + site.title + '</div><div class="desc">' + site.desc + '</div></div><button onclick="openFinalURL(\'' + site.url + '\')">開く</button>';
+      
+      // 【修正】ロゴ（左）、テキスト（中央）、ボタン（右）が綺麗に並ぶようにレイアウトを変更
+      card.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 14px; flex-grow: 1;">
+          ${site.iconHtml}
+          <div class="site-info">
+            <div class="title">${site.title}</div>
+            <div class="desc">${site.desc}</div>
+          </div>
+        </div>
+        <button onclick="openFinalURL('${site.url}')">開く ➔</button>
+      `;
       listEl.appendChild(card);
     });
+    
     if (typeof geminiMode !== 'undefined' && geminiMode) {
       var prompt = 'あなたはプロの物販セラーです。最新の相場を検索して報告してください。回答は必ず指定のテンプレートを遵守してください。\n商品名：' + keyword;
       openFinalURL('https://gemini.google.com/app?q=' + encodeURIComponent(prompt));
