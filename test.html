@@ -17,6 +17,8 @@
       margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; 
       background-color: #0b1120; color: #f8fafc; 
       overscroll-behavior-y: contain;
+      min-height: 100vh;
+      padding-bottom: 240px; /* リストが隠れないように余白確保 */
     }
     
     .header { 
@@ -26,10 +28,9 @@
     }
     .header span.star { color: #3b82f6; margin-right: 8px; text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); }
 
-    .container { max-width: 640px; margin: 0 auto; padding: 0; min-height: 100vh; position: relative; display: flex; flex-direction: column; }
+    .container { max-width: 640px; margin: 0 auto; padding: 0; position: relative; }
     
-    /* 【修正1】リストの余白（パネルに隠れないように250px確保） */
-    .site-list { padding: 16px; padding-bottom: 250px; flex-grow: 1; overflow-y: auto; }
+    .site-list { padding: 16px; } 
     
     .site-card { 
       background-color: #1e293b; border: 1px solid rgba(255,255,255,0.1); 
@@ -37,23 +38,31 @@
       display: flex; justify-content: space-between; align-items: center; 
       box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
     }
-    .site-info .title { font-weight: 700; font-size: 1.1em; margin-bottom: 4px; color: #e2e8f0; }
-    .site-info .desc { font-size: 0.8em; color: #94a3b8; }
+    .site-card .logo-container { 
+      width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+      background-color: #334155; border-radius: 8px; flex-shrink: 0;
+    }
+    .site-card .logo-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
     
-    .site-card button { 
+    .site-card .site-info { flex-grow: 1; padding: 0 16px; }
+    .site-card .site-info .title { font-weight: 700; font-size: 1.1em; margin-bottom: 4px; color: #e2e8f0; }
+    .site-card .site-info .desc { font-size: 0.8em; color: #94a3b8; }
+    
+    .site-card button.open-btn { 
       background-color: #334155; border: 1px solid rgba(255,255,255,0.1); 
       border-radius: 20px; padding: 8px 16px; color: #e2e8f0; font-weight: bold; font-size: 0.9em;
+      flex-shrink: 0;
     }
 
-    /* 【修正2】本物の「すりガラス」にする（白を微量に混ぜて光の反射を作る） */
+    /* ボトムパネルのすりガラス（白を混ぜて光らせる） */
     .bottom-panel {
       position: fixed; bottom: 0; left: 0; width: 100%;
       background: rgba(255, 255, 255, 0.05); 
-      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-      border-top: 1px solid rgba(255, 255, 255, 0.2); 
+      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); 
+      border-top: 1px solid rgba(255,255,255,0.2);
       border-radius: 24px 24px 0 0;
       padding: 20px 20px 35px 20px; box-sizing: border-box; z-index: 1000;
-      box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 -4px 30px rgba(0,0,0,0.6);
     }
 
     .search-row { margin-bottom: 15px; position: relative; display: flex; align-items: center;}
@@ -95,17 +104,26 @@
       box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer; display: none;
     }
 
+    /* 【重要：アニメーション修正箇所】ここが先ほどのコードから漏れていました */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
     
-    /* 【修正3】アクションメニューも同様のプレミアムガラスに */
+    .modal-overlay[style*="display: flex"] .modal-content {
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+    }
+
     .modal-content { 
       background: rgba(255, 255, 255, 0.08); 
       backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
       width: 100%; border-radius: 24px 24px 0 0; 
       padding: 20px; box-sizing: border-box; text-align: center; 
-      animation: slideUp 0.3s ease-out; 
+      transform: translateY(100%); 
       border-top: 1px solid rgba(255, 255, 255, 0.2);
     }
+    @keyframes slideUp { 
+        0% { transform: translateY(100%); } 
+        100% { transform: translateY(0); } 
+    }
+    /* 【アニメーション修正 ここまで】 */
     
     .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer;}
     .modal-btn.camera { background-color: #059669; }
@@ -139,7 +157,9 @@
 
       <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
     </div>
-  </div> <div id="modalOverlay" class="modal-overlay">
+  </div>
+
+  <div id="modalOverlay" class="modal-overlay">
     <div class="modal-content">
       <button class="modal-btn camera" onclick="document.getElementById('imageInput').setAttribute('capture', 'environment'); document.getElementById('imageInput').click(); closeActionMenu();">📸 カメラを起動</button>
       <button class="modal-btn" onclick="document.getElementById('imageInput').removeAttribute('capture'); document.getElementById('imageInput').click(); closeActionMenu();">📁 ファイルを選択</button>
