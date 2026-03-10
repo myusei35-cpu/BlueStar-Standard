@@ -12,79 +12,143 @@
   <title>BlueStar Research Hub</title>
 
   <style>
-    /* ====== FROZEN (スタイル保護) ====== */
-    body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: #0f172a; color: #f8fafc; }
-    .header { background-color: #1e293b; padding: 15px; text-align: center; font-size: 1.4em; font-weight: bold; }
-    .header span.star { color: #f59e0b; margin-right: 6px; }
-    .container { max-width: 640px; margin: 20px auto; padding: 0 20px; }
-    .input-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
-    .input-row input[type="text"] { flex-grow: 1; padding: 12px 14px; border: none; border-radius: 6px; background-color: #334155; color: #f8fafc; font-size: 1em; outline: none; }
-    .btn-generate { background-color: #dc2626; color: #ffffff; border: none; border-radius: 6px; padding: 12px 16px; font-weight: bold; cursor: pointer; }
+    /* ====== FROZEN (最新プレミアムデザイン版) ====== */
+    body { 
+      margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; 
+      background-color: #0b1120; color: #f8fafc; 
+      overscroll-behavior-y: contain;
+    }
     
-    .control-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .control-row button { flex: 1; min-width: 120px; padding: 12px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #ffffff; }
-    .btn-action-menu { background-color: #059669; font-size: 1.1em; } 
-    .btn-all { background-color: #475569; }
-    .btn-gemini { background-color: #7c3aed; }
+    .header { 
+      padding: 15px; text-align: center; font-size: 1.3em; font-weight: 800; 
+      letter-spacing: 1px; background: linear-gradient(135deg, #1e293b, #0f172a);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .header span.star { color: #3b82f6; margin-right: 8px; text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); }
+
+    .container { max-width: 640px; margin: 0 auto; padding: 0; min-height: 100vh; position: relative; display: flex; flex-direction: column; }
     
-    .alert { color: #f87171; margin-bottom: 15px; display: none; }
-    .site-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .site-info .title { font-weight: bold; margin-bottom: 4px; }
-    .site-info .desc { font-size: 0.82em; color: #94a3b8; }
-    .site-card button { background-color: #2563eb; border: none; border-radius: 6px; padding: 8px 14px; color: #ffffff; font-weight: bold; }
+    .site-list { padding: 16px; padding-bottom: 180px; flex-grow: 1; overflow-y: auto; }
     
-    .suggestion-box { position: absolute; top: 100%; left: 0; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; max-height: 200px; overflow-y: auto; display: none; }
-    .suggestion-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #334155; color: #f8fafc; }
-    .suggestion-item:last-child { border-bottom: none; }
+    .site-card { 
+      background-color: #1e293b; border: 1px solid rgba(255,255,255,0.1); 
+      border-radius: 16px; padding: 16px; margin-bottom: 12px; 
+      display: flex; justify-content: space-between; align-items: center; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+    }
+    .site-info .title { font-weight: 700; font-size: 1.1em; margin-bottom: 4px; color: #e2e8f0; }
+    .site-info .desc { font-size: 0.8em; color: #94a3b8; }
+    
+    .site-card button { 
+      background-color: #334155; border: 1px solid rgba(255,255,255,0.1); 
+      border-radius: 20px; padding: 8px 16px; color: #e2e8f0; font-weight: bold; font-size: 0.9em;
+    }
+
+    .bottom-panel {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      background: rgba(15, 23, 42, 0.85); 
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px 35px 20px; box-sizing: border-box; z-index: 1000;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    }
+
+    .search-row { margin-bottom: 15px; position: relative; display: flex; align-items: center;}
+    
+    /* 検索窓と×ボタンの調整 */
+    .input-wrapper { position: relative; flex-grow: 1; }
+    .input-wrapper input[type="text"] { 
+      width: 100%; padding: 14px 35px 14px 16px; box-sizing: border-box;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; 
+      background-color: rgba(0,0,0,0.2); color: #fff; font-size: 1em; outline: none;
+    }
+    .clear-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      cursor: pointer; color: #94a3b8; font-size: 1.2em; display: none; /* 初期は非表示 */
+    }
+
+    .suggestion-box { 
+      position: absolute; bottom: 100%; left: 0; width: 100%; 
+      background-color: #1e293b; border: 1px solid rgba(255,255,255,0.1); 
+      border-radius: 12px; margin-bottom: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+      max-height: 200px; overflow-y: auto; display: none; 
+    }
+    .suggestion-item { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e2e8f0; cursor: pointer;}
     .suggestion-item:active { background-color: #334155; }
 
+    .button-row { display: flex; gap: 12px; }
+    .btn-generate { 
+      flex: 1; background-color: #ef4444; color: #fff; border: none; 
+      border-radius: 12px; padding: 14px 0; font-weight: bold; font-size: 1.05em;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); cursor: pointer;
+    }
+    .btn-action-menu { 
+      flex: 2; background-color: #059669; color: #fff; border: none; 
+      border-radius: 12px; padding: 14px 0; font-weight: bold; font-size: 1.05em;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); cursor: pointer;
+    }
+    /* レンズ転送ボタン（画像選択時に表示されるやつ） */
+    .btn-lens {
+      flex: 1; background-color: #dc2626; color: #fff; border: none; 
+      border-radius: 12px; padding: 14px 0; font-weight: bold; font-size: 1.05em;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer; display: none;
+    }
+
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
-    .modal-content { background-color: #1e293b; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; box-sizing: border-box; text-align: center; animation: slideUp 0.3s ease-out; }
+    .modal-content { 
+      background-color: #1e293b; width: 100%; border-radius: 24px 24px 0 0; 
+      padding: 20px; box-sizing: border-box; text-align: center; 
+      animation: slideUp 0.3s ease-out; 
+    }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
+    
+    .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer;}
     .modal-btn.camera { background-color: #059669; }
     .modal-btn.cancel { background-color: transparent; border: 1px solid #64748b; color: #94a3b8; margin-bottom: 0; }
-/* ========== */
- 
- </style>
+
+    .alert { color: #f87171; margin: 10px 0; text-align: center; font-weight: bold; display: none;}
+  </style>
 </head>
 <body>
   <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB</div>
-<!--======終点:FROZEN======-->
 
-
-
-
-
-<!--======始点:PATCH======-->
-<div class="container" style="display: flex; flex-direction: column; height: 85vh;">
+  <div class="container">
     <div class="alert" id="alert"></div>
     
-    <div class="site-list" id="siteList" style="flex-grow: 1; overflow-y: auto;"></div>
+    <div class="site-list" id="siteList"></div>
 
-    <div style="margin-top: auto; padding-top: 15px;">
-      
-      <div class="control-row">
-        <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
-      </div>
-
-      <div class="input-row">
-        <button class="btn-generate" onclick="generateLinks()">生成</button>
-
-        <div style="position: relative; flex: 1; display: flex;">
-          <input id="keyword" type="text" placeholder="キーワードを入力" autocomplete="off" />
-          <span onclick="document.getElementById('keyword').value=''; document.getElementById('suggestionBox').style.display='none';" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;">❌</span>
+    <div class="bottom-panel">
+      <div class="search-row">
+        <div class="input-wrapper">
+          <input id="keyword" type="text" placeholder="🔍 キーワードを入力" autocomplete="off" oninput="toggleClearBtn(this.value)">
+          <span class="clear-btn" id="clearBtn" onclick="document.getElementById('keyword').value=''; this.style.display='none'; document.getElementById('suggestionBox').style.display='none';">❌</span>
           <div id="suggestionBox" class="suggestion-box"></div>
         </div>
-        
-        <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
-        <button id="lensSubmitBtn" style="display:none; background:#dc2626; color:#fff; border:none; border-radius:6px; padding:10px 12px; font-weight:bold; white-space:nowrap;" onclick="finalLensSubmit()">
-          レンズへ転送
-        </button>
       </div>
 
+      <div class="button-row">
+        <button class="btn-generate" onclick="generateLinks()">生成</button>
+        <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
+        <button id="lensSubmitBtn" class="btn-lens" onclick="finalLensSubmit()">レンズへ転送</button>
+      </div>
+
+      <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
     </div>
+  </div> <div id="modalOverlay" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-btn camera" onclick="document.getElementById('imageInput').setAttribute('capture', 'environment'); document.getElementById('imageInput').click(); closeActionMenu();">📸 カメラを起動</button>
+      <button class="modal-btn" onclick="document.getElementById('imageInput').removeAttribute('capture'); document.getElementById('imageInput').click(); closeActionMenu();">📁 ファイルを選択</button>
+      <button class="modal-btn cancel" onclick="closeActionMenu()">キャンセル</button>
     </div>
+  </div>
+
+  <script>
+    // 検索窓に文字が入力されたら×ボタンを表示するちょっとしたスクリプト
+    function toggleClearBtn(val) {
+      document.getElementById('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
+    }
+  </script>
   <!--======終点:PATCH======-->
 
 
