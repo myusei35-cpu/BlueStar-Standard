@@ -12,13 +12,11 @@
   <title>BlueStar Research Hub</title>
 
   <style>
-    /* ====== FROZEN (最新プレミアムデザイン版・修正完了済) ====== */
-    /* 【修正1】スクロールバグ解消 */
+    /* ====== FROZEN (最新プレミアムデザイン版) ====== */
     body { 
       margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; 
       background-color: #0b1120; color: #f8fafc; 
-      padding-bottom: 240px; /* パネルに隠れないよう巨大な余白を作る */
-      overscroll-behavior-y: contain; 
+      overscroll-behavior-y: contain;
     }
     
     .header { 
@@ -28,12 +26,11 @@
     }
     .header span.star { color: #3b82f6; margin-right: 8px; text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); }
 
-    .container { max-width: 640px; margin: 0 auto; padding: 0; position: relative; display: flex; flex-direction: column; }
+    .container { max-width: 640px; margin: 0 auto; padding: 0; min-height: 100vh; position: relative; display: flex; flex-direction: column; }
     
-    /* 【修正1】余計なスクロール設定を削除 */
-    .site-list { padding: 16px; } 
+    /* 【修正1】リストの余白（パネルに隠れないように250px確保） */
+    .site-list { padding: 16px; padding-bottom: 250px; flex-grow: 1; overflow-y: auto; }
     
-    /* サイトカードのベースデザイン（※中身のロゴは後でJSで直します） */
     .site-card { 
       background-color: #1e293b; border: 1px solid rgba(255,255,255,0.1); 
       border-radius: 16px; padding: 16px; margin-bottom: 12px; 
@@ -48,15 +45,15 @@
       border-radius: 20px; padding: 8px 16px; color: #e2e8f0; font-weight: bold; font-size: 0.9em;
     }
 
-    /* 【修正2】ボトムパネルのすりガラス感を強調（明るく、ぼかしを強く） */
+    /* 【修正2】本物の「すりガラス」にする（白を微量に混ぜて光の反射を作る） */
     .bottom-panel {
       position: fixed; bottom: 0; left: 0; width: 100%;
-      background: rgba(30, 41, 59, 0.65); 
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
-      border-top: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.05); 
+      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      border-top: 1px solid rgba(255, 255, 255, 0.2); 
       border-radius: 24px 24px 0 0;
       padding: 20px 20px 35px 20px; box-sizing: border-box; z-index: 1000;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
     }
 
     .search-row { margin-bottom: 15px; position: relative; display: flex; align-items: center;}
@@ -98,17 +95,17 @@
       box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer; display: none;
     }
 
-    /* 【修正3】アクションメニュー（モーダル）も完全なすりガラスに変更 */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
+    
+    /* 【修正3】アクションメニューも同様のプレミアムガラスに */
     .modal-content { 
-      background: rgba(30, 41, 59, 0.75); /* 半透明化 */
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); /* すりガラス効果 */
+      background: rgba(255, 255, 255, 0.08); 
+      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
       width: 100%; border-radius: 24px 24px 0 0; 
       padding: 20px; box-sizing: border-box; text-align: center; 
       animation: slideUp 0.3s ease-out; 
-      border-top: 1px solid rgba(255,255,255,0.2);
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
     }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     
     .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer;}
     .modal-btn.camera { background-color: #059669; }
