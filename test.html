@@ -17,15 +17,15 @@
        こうすることで fixed な .bottom-panel の backdrop-filter が
        「後ろのスクロールコンテンツ」を正しくブラーできるようになる。 */
     html {
-      background-color: #0b1120;
-    }
-    body { 
-      margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; 
-      background-color: transparent; color: #f8fafc; 
-      overscroll-behavior-y: contain;
-      min-height: 100vh;
-      padding-bottom: 240px;
-    }
+  background-color: #0b1120;
+}
+body { 
+  margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; 
+  background-color: transparent; color: #f8fafc; 
+  overscroll-behavior-y: contain;
+  min-height: 100vh;
+  padding-bottom: 240px;
+}
     
     .header { 
       padding: 15px; text-align: center; font-size: 1.3em; font-weight: 800; 
@@ -74,16 +74,33 @@
      *   「コンテンツがパネルの奥に溶け込む」視覚効果を出す。
      */
     .bottom-panel {
-      position: fixed; bottom: 0; left: 0; width: 100%;
-      /* bodyをtransparentにしたことで、後ろのカードが本当に透けるようになった */
-      background: rgba(11, 17, 32, 0.55);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 24px 24px 0 0;
-      padding: 16px; 
-      box-sizing: border-box; z-index: 1000;
-      box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
-    }
+  position: fixed; bottom: 0; left: 0; width: 100%;
+  background: transparent;
+  border-radius: 24px 24px 0 0;
+  padding: 16px;
+  padding-top: 36px;
+  box-sizing: border-box; z-index: 1000;
+}
+.bottom-panel::before {
+  content: '';
+  position: absolute; top: -48px; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(11, 17, 32, 0)    0%,
+    rgba(11, 17, 32, 0.65) 28%,
+    rgba(11, 17, 32, 0.95) 52%,
+    rgba(11, 17, 32, 1)    100%
+  );
+  border-radius: 24px 24px 0 0;
+  pointer-events: none;
+  z-index: -1;
+}
+.bottom-panel::after {
+  content: '';
+  position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
+  pointer-events: none;
+}
 
     .search-row { margin-bottom: 15px; position: relative; display: flex; align-items: center;}
     
