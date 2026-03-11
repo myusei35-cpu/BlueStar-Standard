@@ -181,94 +181,100 @@
 
 
   <script>
-  //======始点: PATCH======
-  function generateLinks() {
-    // 1. 検索窓からキーワードを取得
-    const keyword = document.getElementById('keyword').value.trim();
-
-    // ★追加おすすめ：生成ボタンを押した瞬間に、スマホのキーボードを自動で閉じる
-    document.getElementById('keyword').blur(); 
-    // ★追加おすすめ：出しっぱなしのサジェスト（予測変換）があれば隠す
-    document.getElementById('suggestionBox').style.display = 'none';
-
-    // 2. もし何も入力されていなかったら警告を出して止める
-    const alertBox = document.getElementById('alert');
-    if (!keyword) {
-      alertBox.innerText = '⚠️ キーワードを入力してください';
-      alertBox.style.display = 'block';
-      return;
+    // 検索窓に文字が入力されたら×ボタンを表示するちょっとしたスクリプト
+    function toggleClearBtn(val) {
+      document.getElementById('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
     }
-    // エラーがなければ警告を消す
-    alertBox.style.display = 'none';
 
-    // 3. キーワードをURL用に変換（エンコード）
-    const encKey = encodeURIComponent(keyword);
+    //======始点: PATCH======
+    function generateLinks() {
+      // 1. 検索窓からキーワードを取得
+      const keyword = document.getElementById('keyword').value.trim();
 
-    // 4. 各サイトのデータと画像URL
-    const sites = [
-      {
-        name: 'トレファク',
-        desc: '店舗在庫',
-        img: 'https://myusei35-cpu.github.io/BlueStar-Standard/icon-192.jpg', 
-        url: `https://www.treasure-f.com/search/?word=${encKey}`
-      },
-      {
-        name: 'カインドオル',
-        desc: 'ブランド古着',
-        img: 'https://myusei35-cpu.github.io/BlueStar-Standard/kindal.jpg', 
-        url: `https://shop.kind.co.jp/item_list/?kw=${encKey}`
-      },
-      {
-        name: 'セカンドストリート',
-        desc: '店舗在庫',
-        img: 'https://myusei35-cpu.github.io/BlueStar-Standard/2ndstreet.jpg', 
-        url: `https://www.2ndstreet.jp/search?keyword=${encKey}`
-      },
-      {
-        name: 'ヤフオク',
-        desc: '落札相場',
-        img: 'https://myusei35-cpu.github.io/BlueStar-Standard/yahoo.jpg', 
-        url: `https://auctions.yahoo.co.jp/closedsearch/closedsearch?va=${encKey}`
-      },
-      {
-        name: 'メルカリ：販売中',
-        desc: 'ライバル確認',
-        img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
-        url: `https://jp.mercari.com/search?keyword=${encKey}&status=on_sale`
-      },
-      {
-        name: 'メルカリ：売り切れ',
-        desc: '相場確認',
-        img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
-        url: `https://jp.mercari.com/search?keyword=${encKey}&status=sold_out`
+      // ★追加おすすめ：生成ボタンを押した瞬間に、スマホのキーボードを自動で閉じる
+      document.getElementById('keyword').blur(); 
+      // ★追加おすすめ：出しっぱなしのサジェスト（予測変換）があれば隠す
+      document.getElementById('suggestionBox').style.display = 'none';
+
+      // 2. もし何も入力されていなかったら警告を出して止める
+      const alertBox = document.getElementById('alert');
+      if (!keyword) {
+        alertBox.innerText = '⚠️ キーワードを入力してください';
+        alertBox.style.display = 'block';
+        return;
       }
-    ];
+      // エラーがなければ警告を消す
+      alertBox.style.display = 'none';
 
-    // 5. HTMLを組み立てて画面に出力
-    let html = '';
-    sites.forEach(site => {
-      // ロゴ、テキスト、ボタンを左右に綺麗に分ける完璧なレイアウト
-      html += `
-        <div class="site-card">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <div style="width: 44px; height: 44px; background-color: #fff; border-radius: 10px; display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0;">
-              <img src="${site.img}" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+      // 3. キーワードをURL用に変換（エンコード）
+      const encKey = encodeURIComponent(keyword);
+
+      // 4. 各サイトのデータと画像URL
+      const sites = [
+        {
+          name: 'トレファク',
+          desc: '店舗在庫',
+          img: 'https://myusei35-cpu.github.io/BlueStar-Standard/icon-192.jpg', 
+          url: `https://www.treasure-f.com/search/?word=${encKey}`
+        },
+        {
+          name: 'カインドオル',
+          desc: 'ブランド古着',
+          img: 'https://myusei35-cpu.github.io/BlueStar-Standard/kindal.jpg', 
+          url: `https://shop.kind.co.jp/item_list/?kw=${encKey}`
+        },
+        {
+          name: 'セカンドストリート',
+          desc: '店舗在庫',
+          img: 'https://myusei35-cpu.github.io/BlueStar-Standard/2ndstreet.jpg', 
+          url: `https://www.2ndstreet.jp/search?keyword=${encKey}`
+        },
+        {
+          name: 'ヤフオク',
+          desc: '落札相場',
+          img: 'https://myusei35-cpu.github.io/BlueStar-Standard/yahoo.jpg', 
+          url: `https://auctions.yahoo.co.jp/closedsearch/closedsearch?va=${encKey}`
+        },
+        {
+          name: 'メルカリ：販売中',
+          desc: 'ライバル確認',
+          img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
+          url: `https://jp.mercari.com/search?keyword=${encKey}&status=on_sale`
+        },
+        {
+          name: 'メルカリ：売り切れ',
+          desc: '相場確認',
+          img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
+          url: `https://jp.mercari.com/search?keyword=${encKey}&status=sold_out`
+        }
+      ];
+
+      // 5. HTMLを組み立てて画面に出力
+      let html = '';
+      sites.forEach(site => {
+        // ★修正：最新のプレミアムCSSに完全対応。横長ロゴも白背景の中に綺麗に収まる設計
+        html += `
+          <div class="site-card">
+            <div class="logo-container" style="background-color: #fff;">
+              <img src="${site.img}" style="width: 100%; height: 100%; object-fit: contain; padding: 4px; box-sizing: border-box; border-radius: 8px;">
             </div>
             <div class="site-info">
               <div class="title">${site.name}</div>
               <div class="desc">${site.desc}</div>
             </div>
+            <button class="open-btn" onclick="window.open('${site.url}', '_blank')">開く ➔</button>
           </div>
-          <button onclick="window.open('${site.url}', '_blank')">Open ➔</button>
-        </div>
-      `;
-    });
+        `;
+      });
 
-    document.getElementById('siteList').innerHTML = html;
-  }
-  // 修正3：不要なGAS連携コード（openBlustarModal、sendDataToGAS等）は完全に削除済み
-  //======終点: PATCH======
+      document.getElementById('siteList').innerHTML = html;
 
+      // ★修正：キーボードが閉じた時のレイアウトジャンプ（上にズレる現象）を防ぐため、一番上にスクロールを戻す
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+    }
+    //======終点: PATCH======
   </script>
 
 
