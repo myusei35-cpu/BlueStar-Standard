@@ -380,8 +380,14 @@
 
   function openFinalURL(url) {
     var targetPath = url.replace(/^https?:\/\//, '');
-    var intentUrl = (url.indexOf('mercari.com') !== -1) 
-      ? 'intent://' + targetPath + '#Intent;scheme=https;package=com.kouzoh.mercari;end;'
+    var pkg = '';
+    if (url.indexOf('mercari.com') !== -1)         pkg = 'com.kouzoh.mercari';
+    else if (url.indexOf('treasure-f.com') !== -1) pkg = 'com.treasuref.storeapp';
+    else if (url.indexOf('2ndstreet.jp') !== -1)   pkg = 'jp.co.geonetworks.reuse.app';
+    else if (url.indexOf('auctions.yahoo') !== -1)  pkg = 'jp.co.yahoo.android.yauction';
+
+    var intentUrl = pkg
+      ? 'intent://' + targetPath + '#Intent;scheme=https;package=' + pkg + ';end;'
       : 'intent://' + targetPath + '#Intent;scheme=https;end;';
     var a = document.createElement('a');
     a.href = intentUrl;
