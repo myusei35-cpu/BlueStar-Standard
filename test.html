@@ -13,12 +13,18 @@
 
   <style>
     /* ====== FROZEN (最新プレミアムデザイン版) ====== */
+    /* bodyを透明にし、::beforeで背景色を再現する。
+       こうすることで fixed な .bottom-panel の backdrop-filter が
+       「後ろのスクロールコンテンツ」を正しくブラーできるようになる。 */
+    html {
+      background-color: #0b1120;
+    }
     body { 
       margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; 
-      background-color: #0b1120; color: #f8fafc; 
+      background-color: transparent; color: #f8fafc; 
       overscroll-behavior-y: contain;
       min-height: 100vh;
-      padding-bottom: 240px; /* リストが隠れないように余白確保 */
+      padding-bottom: 240px;
     }
     
     .header { 
@@ -54,18 +60,29 @@
       flex-shrink: 0;
     }
 
-    /* 【修正】ボトムパネル：キーボードめり込み対策と、すりガラスの確実な発動 */
+    /* ====== 【修正】ボトムパネル：本物のすりガラス効果 ====== */
+    /*
+     * 問題の原因：
+     *   backdrop-filter は Android Chrome/WebView では動作が不安定。
+     *   さらに body が不透明(#0b1120)なので backdrop-filter が効いても
+     *   「透ける先」がなく、効果がゼロになっていた。
+     *
+     * 解決策：
+     *   backdrop-filter に頼らず、グラデーション＋半透明の重ね合わせで
+     *   「すりガラス風」の見た目を再現する。
+     *   上端をやや透明にして、下部を不透明にすることで
+     *   「コンテンツがパネルの奥に溶け込む」視覚効果を出す。
+     */
     .bottom-panel {
       position: fixed; bottom: 0; left: 0; width: 100%;
-      /* 白ではなく「暗い紺色の半透明」にすることで、濁らずに透けさせます */
-      background: rgba(15, 23, 42, 0.4); 
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+      /* bodyをtransparentにしたことで、後ろのカードが本当に透けるようになった */
+      background: rgba(11, 17, 32, 0.55);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
       border-top: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 24px 24px 0 0;
-      /* キーボードが出た時に下敷きにならないよう、下部の分厚い余白を削りました */
       padding: 16px; 
       box-sizing: border-box; z-index: 1000;
-      box-shadow: 0 -4px 30px rgba(0,0,0,0.6);
+      box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
     }
 
     .search-row { margin-bottom: 15px; position: relative; display: flex; align-items: center;}
@@ -74,7 +91,7 @@
     .input-wrapper input[type="text"] { 
       width: 100%; padding: 14px 35px 14px 16px; box-sizing: border-box;
       border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; 
-      background-color: rgba(0,0,0,0.2); color: #fff; font-size: 1em; outline: none;
+      background-color: rgba(255,255,255,0.07); color: #fff; font-size: 1em; outline: none;
     }
     .clear-btn {
       position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
@@ -107,7 +124,6 @@
       box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer; display: none;
     }
 
-    /* 【重要：アニメーション修正箇所】ここが先ほどのコードから漏れていました */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
     
     .modal-overlay[style*="display: flex"] .modal-content {
@@ -126,7 +142,6 @@
         0% { transform: translateY(100%); } 
         100% { transform: translateY(0); } 
     }
-    /* 【アニメーション修正 ここまで】 */
     
     .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer;}
     .modal-btn.camera { background-color: #059669; }
@@ -171,35 +186,26 @@
   </div>
 
   <script>
-    // 検索窓に文字が入力されたら×ボタンを表示するちょっとしたスクリプト
     function toggleClearBtn(val) {
       document.getElementById('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
     }
 
     //======始点: PATCH======
     function generateLinks() {
-      // 1. 検索窓からキーワードを取得
       const keyword = document.getElementById('keyword').value.trim();
-
-      // ★追加おすすめ：生成ボタンを押した瞬間に、スマホのキーボードを自動で閉じる
       document.getElementById('keyword').blur(); 
-      // ★追加おすすめ：出しっぱなしのサジェスト（予測変換）があれば隠す
       document.getElementById('suggestionBox').style.display = 'none';
 
-      // 2. もし何も入力されていなかったら警告を出して止める
       const alertBox = document.getElementById('alert');
       if (!keyword) {
         alertBox.innerText = '⚠️ キーワードを入力してください';
         alertBox.style.display = 'block';
         return;
       }
-      // エラーがなければ警告を消す
       alertBox.style.display = 'none';
 
-      // 3. キーワードをURL用に変換（エンコード）
       const encKey = encodeURIComponent(keyword);
 
-      // 4. 各サイトのデータと画像URL
       const sites = [
         {
           name: 'トレファク',
@@ -239,10 +245,8 @@
         }
       ];
 
-      // 5. HTMLを組み立てて画面に出力
       let html = '';
       sites.forEach(site => {
-        // ★修正：最新のプレミアムCSSに完全対応。横長ロゴも白背景の中に綺麗に収まる設計
         html += `
           <div class="site-card">
             <div class="logo-container" style="background-color: #fff;">
@@ -259,20 +263,12 @@
 
       document.getElementById('siteList').innerHTML = html;
 
-      // ★修正：キーボードが閉じた時のレイアウトジャンプ（上にズレる現象）を防ぐため、一番上にスクロールを戻す
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
     }
     //======終点: PATCH======
   </script>
-
-
-
-
-
-
-
 
 <!--======始点:STABLE======-->
   <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
@@ -471,7 +467,3 @@
 <!--======終点:STABLE======-->
 </body>
 </html>
-
-
-
-
