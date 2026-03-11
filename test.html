@@ -379,7 +379,13 @@
   }
 
   function openFinalURL(url) {
-    location.href = url;
+    var targetPath = url.replace(/^https?:\/\//, '');
+    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
+    var a = document.createElement('a');
+    a.href = intentUrl;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function showLensSubmit() {
