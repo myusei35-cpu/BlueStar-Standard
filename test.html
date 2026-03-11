@@ -221,13 +221,13 @@
           name: 'トレファク',
           desc: '店舗在庫',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/trefac.jpg', 
-          url: `https://www.treasure-f.com/search/?word=${encKey}`
+          url: `https://www.trefac.jp/store/search_result.html?q=${encKey}&searchbox=1`
         },
         {
           name: 'カインドオル',
           desc: 'ブランド古着',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/kindal.jpg', 
-          url: `https://shop.kind.co.jp/item_list/?kw=${encKey}`
+          url: `https://shop.kind.co.jp/search?q=${encKey}`
         },
         {
           name: 'セカンドストリート',
@@ -239,19 +239,19 @@
           name: 'ヤフオク',
           desc: '落札相場',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/yahoo.jpg', 
-          url: `https://auctions.yahoo.co.jp/closedsearch/closedsearch?va=${encKey}`
+          url: `https://auctions.yahoo.co.jp/search/search?p=${encKey}&tab_ex=commerce&ei=utf-8`
         },
         {
           name: 'メルカリ：販売中',
           desc: 'ライバル確認',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
-          url: `https://jp.mercari.com/search?keyword=${encKey}&status=on_sale`
+          url: `https://jp.mercari.com/search?keyword=${encKey}&item_condition_id=3&category_id=11%2C12%2C13%2C14%2C15%2C27%2C1488%2C163%2C30%2C31%2C32%2C35&status=on_sale&seller_type=0&item_types=mercari&sort=created_time&order=desc`
         },
         {
           name: 'メルカリ：売り切れ',
           desc: '相場確認',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
-          url: `https://jp.mercari.com/search?keyword=${encKey}&status=sold_out`
+          url: `https://jp.mercari.com/search?keyword=${encKey}&item_condition_id=3&category_id=11%2C12%2C13%2C14%2C15%2C27%2C1488%2C163%2C30%2C31%2C32%2C35&status=sold_out&seller_type=0&item_types=mercari&sort=created_time&order=desc`
         }
       ];
 
@@ -379,13 +379,7 @@
   }
 
   function openFinalURL(url) {
-    var targetPath = url.replace(/^https?:\/\//, '');
-    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
-    var a = document.createElement('a');
-    a.href = intentUrl;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    location.href = url;
   }
 
   function showLensSubmit() {
