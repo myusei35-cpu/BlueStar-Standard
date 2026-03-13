@@ -13,12 +13,18 @@
 
   <style>
     /* ====== FROZEN (最新プレミアムデザイン版) ====== */
+    /* bodyを透明にし、::beforeで背景色を再現する。
+       こうすることで fixed な .bottom-panel の backdrop-filter が
+       「後ろのスクロールコンテンツ」を正しくブラーできるようになる。 */
+    html {
+      background-color: #0b1120;
+    }
     body { 
       margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; 
-      background-color: #0b1120; color: #f8fafc; 
+      background-color: transparent; color: #f8fafc; 
       overscroll-behavior-y: contain;
       min-height: 100vh;
-      padding-bottom: 240px; /* リストが隠れないように余白確保 */
+      padding-bottom: 240px;
     }
     
     .header { 
@@ -54,18 +60,39 @@
       flex-shrink: 0;
     }
 
-    /* 【修正】ボトムパネル：キーボードめり込み対策と、すりガラスの確実な発動 */
+    /* ====== 【修正v3】ボトムパネル：::before グラデーションフェード手法 ====== */
+    /*
+     * backdrop-filter:blur() は Android WebView の position:fixed では効かない。
+     * ::before 疑似要素で上端透明→下端不透明のグラデーションを重ねることで
+     * 「コンテンツがパネルに溶け込む」すりガラス風の見た目を確実に再現する。
+     */
     .bottom-panel {
       position: fixed; bottom: 0; left: 0; width: 100%;
-      /* 白ではなく「暗い紺色の半透明」にすることで、濁らずに透けさせます */
-      background: rgba(15, 23, 42, 0.4); 
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
-      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
       border-radius: 24px 24px 0 0;
-      /* キーボードが出た時に下敷きにならないよう、下部の分厚い余白を削りました */
-      padding: 16px; 
+      padding: 16px;
+      padding-top: 36px;
       box-sizing: border-box; z-index: 1000;
-      box-shadow: 0 -4px 30px rgba(0,0,0,0.6);
+    }
+    .bottom-panel::before {
+      content: '';
+      position: absolute; top: -48px; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(11, 17, 32, 0)    0%,
+        rgba(11, 17, 32, 0.65) 28%,
+        rgba(11, 17, 32, 0.95) 52%,
+        rgba(11, 17, 32, 1)    100%
+      );
+      border-radius: 24px 24px 0 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .bottom-panel::after {
+      content: '';
+      position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
+      pointer-events: none;
     }
 
     .search-row { margin-bottom: 15px; position: relative; display: flex; align-items: center;}
@@ -74,7 +101,7 @@
     .input-wrapper input[type="text"] { 
       width: 100%; padding: 14px 35px 14px 16px; box-sizing: border-box;
       border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; 
-      background-color: rgba(0,0,0,0.2); color: #fff; font-size: 1em; outline: none;
+      background-color: rgba(255,255,255,0.07); color: #fff; font-size: 1em; outline: none;
     }
     .clear-btn {
       position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
@@ -107,7 +134,6 @@
       box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer; display: none;
     }
 
-    /* 【重要：アニメーション修正箇所】ここが先ほどのコードから漏れていました */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
     
     .modal-overlay[style*="display: flex"] .modal-content {
@@ -126,7 +152,6 @@
         0% { transform: translateY(100%); } 
         100% { transform: translateY(0); } 
     }
-    /* 【アニメーション修正 ここまで】 */
     
     .modal-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; background-color: #334155; color: #fff; border: none; border-radius: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer;}
     .modal-btn.camera { background-color: #059669; }
@@ -171,47 +196,38 @@
   </div>
 
   <script>
-    // 検索窓に文字が入力されたら×ボタンを表示するちょっとしたスクリプト
     function toggleClearBtn(val) {
       document.getElementById('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
     }
 
     //======始点: PATCH======
     function generateLinks() {
-      // 1. 検索窓からキーワードを取得
       const keyword = document.getElementById('keyword').value.trim();
-
-      // ★追加おすすめ：生成ボタンを押した瞬間に、スマホのキーボードを自動で閉じる
       document.getElementById('keyword').blur(); 
-      // ★追加おすすめ：出しっぱなしのサジェスト（予測変換）があれば隠す
       document.getElementById('suggestionBox').style.display = 'none';
 
-      // 2. もし何も入力されていなかったら警告を出して止める
       const alertBox = document.getElementById('alert');
       if (!keyword) {
         alertBox.innerText = '⚠️ キーワードを入力してください';
         alertBox.style.display = 'block';
         return;
       }
-      // エラーがなければ警告を消す
       alertBox.style.display = 'none';
 
-      // 3. キーワードをURL用に変換（エンコード）
       const encKey = encodeURIComponent(keyword);
 
-      // 4. 各サイトのデータと画像URL
       const sites = [
         {
           name: 'トレファク',
           desc: '店舗在庫',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/trefac.jpg', 
-          url: `https://www.treasure-f.com/search/?word=${encKey}`
+          url: `https://www.trefac.jp/store/search_result.html?q=${encKey}&searchbox=1`
         },
         {
           name: 'カインドオル',
           desc: 'ブランド古着',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/kindal.jpg', 
-          url: `https://shop.kind.co.jp/item_list/?kw=${encKey}`
+          url: `https://shop.kind.co.jp/search?q=${encKey}`
         },
         {
           name: 'セカンドストリート',
@@ -223,26 +239,24 @@
           name: 'ヤフオク',
           desc: '落札相場',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/yahoo.jpg', 
-          url: `https://auctions.yahoo.co.jp/closedsearch/closedsearch?va=${encKey}`
+          url: `https://auctions.yahoo.co.jp/search/search?p=${encKey}&tab_ex=commerce&ei=utf-8`
         },
         {
           name: 'メルカリ：販売中',
           desc: 'ライバル確認',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
-          url: `https://jp.mercari.com/search?keyword=${encKey}&status=on_sale`
+          url: `https://jp.mercari.com/search?keyword=${encKey}&item_condition_id=3&category_id=11%2C12%2C13%2C14%2C15%2C27%2C1488%2C163%2C30%2C31%2C32%2C35&status=on_sale&seller_type=0&item_types=mercari&sort=created_time&order=desc`
         },
         {
           name: 'メルカリ：売り切れ',
           desc: '相場確認',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
-          url: `https://jp.mercari.com/search?keyword=${encKey}&status=sold_out`
+          url: `https://jp.mercari.com/search?keyword=${encKey}&item_condition_id=3&category_id=11%2C12%2C13%2C14%2C15%2C27%2C1488%2C163%2C30%2C31%2C32%2C35&status=sold_out&seller_type=0&item_types=mercari&sort=created_time&order=desc`
         }
       ];
 
-      // 5. HTMLを組み立てて画面に出力
       let html = '';
       sites.forEach(site => {
-        // ★修正：最新のプレミアムCSSに完全対応。横長ロゴも白背景の中に綺麗に収まる設計
         html += `
           <div class="site-card">
             <div class="logo-container" style="background-color: #fff;">
@@ -252,14 +266,13 @@
               <div class="title">${site.name}</div>
               <div class="desc">${site.desc}</div>
             </div>
-            <button class="open-btn" onclick="window.open('${site.url}', '_blank')">開く ➔</button>
+            <button class="open-btn" onclick="openFinalURL('${site.url}')">開く ➔</button>
           </div>
         `;
       });
 
       document.getElementById('siteList').innerHTML = html;
 
-      // ★修正：キーボードが閉じた時のレイアウトジャンプ（上にズレる現象）を防ぐため、一番上にスクロールを戻す
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
@@ -267,19 +280,13 @@
     //======終点: PATCH======
   </script>
 
-
-
-
-
-
-
-
 <!--======始点:STABLE======-->
   <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
-      <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">画像を選択してください</h3>
+      <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">アクションを選択してください</h3>
       <button class="modal-btn camera" onclick="openCamera()">📸 カメラで撮影</button>
       <button class="modal-btn" onclick="openGallery()">📁 アルバムから選択</button>
+      <button class="modal-btn" style="background-color:#2563eb;" onclick="closeActionMenu(event); openCalcModal();">💹 利益計算</button>
       <button class="modal-btn cancel" onclick="closeActionMenu(event)">キャンセル</button>
     </div>
   </div>
@@ -373,9 +380,7 @@
 
   function openFinalURL(url) {
     var targetPath = url.replace(/^https?:\/\//, '');
-    var intentUrl = (url.indexOf('mercari.com') !== -1) 
-      ? 'intent://' + targetPath + '#Intent;scheme=https;package=com.kouzoh.mercari;end;'
-      : 'intent://' + targetPath + '#Intent;scheme=https;end;';
+    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
@@ -468,6 +473,451 @@
     navigator.serviceWorker.register('sw.js');
   }
   </script>
+
+  <!-- ======= 利益計算モーダル ======= -->
+  <style>
+    /* 計算機モーダル — スクロール対応フルスクリーン */
+    #calcModal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: none; flex-direction: column;
+      z-index: 3000; overflow: hidden;
+    }
+    #calcModal .calc-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px;
+      background: #0f172a;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    #calcModal .calc-header h2 {
+      font-size: 1em; font-weight: 800; letter-spacing: 1.5px; color: #e2e8f0; margin: 0;
+    }
+    #calcModal .calc-header h2 span { color: #3b82f6; }
+    #calcModal .close-calc {
+      background: #334155; border: none; color: #94a3b8;
+      border-radius: 8px; padding: 6px 12px; font-size: 0.9em; cursor: pointer;
+    }
+    #calcModal .calc-body {
+      flex: 1; overflow-y: auto; padding: 14px 16px 40px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* セクション */
+    .cs { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .cs-label { font-size: 0.68em; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
+
+    /* セレクト */
+    .cs select {
+      width: 100%; background: #263348; color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+      padding: 11px 36px 11px 12px; font-size: 0.95em; outline: none;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='%2394a3b8' d='M0 0l5 7 5-7z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+
+    /* インプットグリッド */
+    .ci2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cf { display: flex; flex-direction: column; gap: 4px; }
+    .cf label { font-size: 0.7em; font-weight: 600; color: #64748b; }
+    .ci { position: relative; }
+    .ci input {
+      width: 100%; background: #263348; color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+      padding: 11px 28px 11px 12px; font-size: 1em; font-weight: 700;
+      text-align: right; outline: none; box-sizing: border-box;
+    }
+    .ci input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+    .ci .u { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8em; color: #64748b; pointer-events: none; }
+
+    /* 売れる価格プレビュー */
+    .sell-preview {
+      background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 10px; padding: 10px 14px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 10px;
+    }
+    .sell-preview span:first-child { font-size: 0.78em; color: #94a3b8; }
+    .sell-preview span:last-child { font-size: 1.1em; font-weight: 800; color: #60a5fa; }
+
+    /* 仕入れ送料エリア */
+    #onlineShippingRow { display: none; }
+    #outsourceCustomRow { display: none; }
+
+    /* 計算ボタン */
+    .calc-go {
+      width: 100%; background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff; border: none; border-radius: 14px; padding: 15px;
+      font-size: 1.1em; font-weight: 800; letter-spacing: 1px; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(37,99,235,0.4); margin-top: 4px;
+    }
+    .calc-go:active { transform: scale(0.97); }
+
+    /* 結果 */
+    #calcResult { display: none; margin-top: 10px; animation: fadeSlide 0.3s ease; }
+    @keyframes fadeSlide { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    .verdict2 {
+      border-radius: 14px; padding: 16px; text-align: center;
+      margin-bottom: 10px; border: 2px solid transparent;
+    }
+    .verdict2.ok  { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.4); }
+    .verdict2.ng  { background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.35); }
+    .verdict2.warn{ background: rgba(245,158,11,0.1);   border-color: rgba(245,158,11,0.35); }
+    .v-icon  { font-size: 2em; }
+    .v-label { font-size: 1.4em; font-weight: 900; letter-spacing: 2px; margin: 4px 0; }
+    .verdict2.ok   .v-label { color: #10b981; }
+    .verdict2.ng   .v-label { color: #ef4444; }
+    .verdict2.warn .v-label { color: #f59e0b; }
+    .v-reason { font-size: 0.78em; color: #94a3b8; }
+
+    .bdown { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; overflow: hidden; margin-bottom: 10px; }
+    .br { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.88em; }
+    .br:last-child { border-bottom: none; }
+    .br .bk { color: #94a3b8; }
+    .br .bv { font-weight: 700; }
+    .br .bv.pos { color: #10b981; }
+    .br .bv.neg { color: #ef4444; }
+    .br.btotal { background: #263348; }
+    .br.btotal .bk { color: #e2e8f0; font-weight: 700; }
+
+    .ratebar { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+    .rbl { display: flex; justify-content: space-between; margin-bottom: 7px; font-size: 0.78em; color: #94a3b8; }
+    .rbl span:last-child { font-weight: 700; font-size: 1em; color: #e2e8f0; }
+    .rbbg { background: #263348; border-radius: 99px; height: 9px; overflow: hidden; }
+    .rbfill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+
+    .calc-reset { width: 100%; background: transparent; color: #64748b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 11px; font-size: 0.9em; cursor: pointer; margin-top: 4px; }
+  </style>
+
+  <div id="calcModal">
+    <div class="calc-header">
+      <h2>💹 <span>利益</span>計算</h2>
+      <button class="close-calc" onclick="closeCalcModal()">✕ 閉じる</button>
+    </div>
+    <div class="calc-body">
+
+      <!-- 仕入れ先 -->
+      <div class="cs">
+        <div class="cs-label">仕入れ先</div>
+        <select id="cSource" onchange="onSourceChange()">
+          <option value="store">店舗（トレファク・2ndST等）</option>
+          <option value="online">オンライン（メルカリ仕入れ等）</option>
+        </select>
+      </div>
+
+      <!-- 商品価格（仕入れ値） -->
+      <div class="cs">
+        <div class="cs-label">仕入れ値</div>
+        <div class="cf">
+          <label>商品価格</label>
+          <div class="ci"><input type="number" id="cCost" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+        </div>
+        <!-- オンライン時のみ表示：仕入れ送料 -->
+        <div id="onlineShippingRow" style="margin-top:8px;">
+          <div class="cf">
+            <label>仕入れ送料</label>
+            <div class="ci"><input type="number" id="cBuyShip" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 販売価格（相場入力） -->
+      <div class="cs">
+        <div class="cs-label">メルカリ相場 → 売れる価格を自動計算</div>
+        <div class="ci2">
+          <div class="cf">
+            <label>高値</label>
+            <div class="ci"><input type="number" id="cHigh" inputmode="numeric" placeholder="0" oninput="updateSellPreview()"><span class="u">円</span></div>
+          </div>
+          <div class="cf">
+            <label>安値</label>
+            <div class="ci"><input type="number" id="cLow" inputmode="numeric" placeholder="0" oninput="updateSellPreview()"><span class="u">円</span></div>
+          </div>
+        </div>
+        <div class="sell-preview">
+          <span>売れる価格（÷2×0.98）</span>
+          <span id="cSellPreview">— 円</span>
+        </div>
+      </div>
+
+      <!-- 販売手数料 -->
+      <div class="cs">
+        <div class="cs-label">販売先・手数料</div>
+        <select id="cFeeSelect">
+          <option value="10">ショップス（10%）</option>
+          <option value="10">メルカリ（10%）</option>
+          <option value="10">ヤフオク（10%）</option>
+          <option value="5">ヤフーフリマ（5%）</option>
+        </select>
+      </div>
+
+      <!-- 外注手数料 -->
+      <div class="cs">
+        <div class="cs-label">外注手数料</div>
+        <select id="cOutsource" onchange="onOutsourceChange()">
+          <option value="0">なし（0円）</option>
+          <option value="400">400円</option>
+          <option value="500">500円</option>
+          <option value="custom">自由入力</option>
+        </select>
+        <div id="outsourceCustomRow" style="margin-top:8px;">
+          <div class="cf">
+            <label>外注手数料（手入力）</label>
+            <div class="ci"><input type="number" id="cOutsourceCustom" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 回転率・ライバル分析 -->
+      <div class="cs">
+        <div class="cs-label">回転率・ライバル分析（任意）</div>
+        <div class="ci2">
+          <div class="cf">
+            <label>売れた件数</label>
+            <div class="ci"><input type="number" id="cSoldCount" inputmode="numeric" placeholder="0"><span class="u">件</span></div>
+          </div>
+          <div class="cf">
+            <label>現在の出品数</label>
+            <div class="ci"><input type="number" id="cListCount" inputmode="numeric" placeholder="0"><span class="u">件</span></div>
+          </div>
+          <div class="cf">
+            <label>高値の件数</label>
+            <div class="ci"><input type="number" id="cHighCount" inputmode="numeric" placeholder="0"><span class="u">件</span></div>
+          </div>
+          <div class="cf">
+            <label>安値の件数</label>
+            <div class="ci"><input type="number" id="cLowCount" inputmode="numeric" placeholder="0"><span class="u">件</span></div>
+          </div>
+        </div>
+        <div style="margin-top:8px; font-size:0.72em; color:#475569; line-height:1.6;">
+          ※ 入力すると消化率・価格帯リスクを追加判定します（空欄でもOK）
+        </div>
+      </div>
+
+      <!-- 計算ボタン -->
+      <button class="calc-go" onclick="runCalc()">▶ 利益を計算する</button>
+
+      <!-- 結果エリア -->
+      <div id="calcResult">
+        <div class="verdict2" id="cVerdict">
+          <div class="v-icon" id="cVIcon"></div>
+          <div class="v-label" id="cVLabel"></div>
+          <div class="v-reason" id="cVReason"></div>
+        </div>
+        <div class="bdown">
+          <div class="br"><span class="bk">売れる価格</span><span class="bv" id="rSP"></span></div>
+          <div class="br"><span class="bk">　└ 仕入れ値</span><span class="bv neg" id="rCC"></span></div>
+          <div class="br"><span class="bk">　└ 仕入れ送料</span><span class="bv neg" id="rBS"></span></div>
+          <div class="br"><span class="bk">　└ 販売手数料</span><span class="bv neg" id="rFF"></span></div>
+          <div class="br"><span class="bk">　└ 外注手数料</span><span class="bv neg" id="rOU"></span></div>
+          <div class="br btotal"><span class="bk">純利益</span><span class="bv" id="rPR"></span></div>
+        </div>
+        <div class="ratebar">
+          <div class="rbl"><span>利益率</span><span id="rRL"></span></div>
+          <div class="rbbg"><div class="rbfill" id="rRB" style="width:0%"></div></div>
+        </div>
+        <!-- 消化率・ライバル分析結果 -->
+        <div id="rotationResult" style="display:none;">
+          <div class="cs" style="margin-bottom:10px;">
+            <div class="cs-label">回転率・ライバル分析</div>
+            <div id="rotationDetail"></div>
+          </div>
+        </div>
+        <button class="calc-reset" onclick="resetCalc2()">↺ リセット</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+  function openCalcModal() {
+    document.getElementById('calcModal').style.display = 'flex';
+  }
+  function closeCalcModal() {
+    document.getElementById('calcModal').style.display = 'none';
+  }
+  function onSourceChange() {
+    var v = document.getElementById('cSource').value;
+    document.getElementById('onlineShippingRow').style.display = v === 'online' ? 'block' : 'none';
+  }
+  function onOutsourceChange() {
+    var v = document.getElementById('cOutsource').value;
+    document.getElementById('outsourceCustomRow').style.display = v === 'custom' ? 'block' : 'none';
+  }
+  function updateSellPreview() {
+    var h = parseFloat(document.getElementById('cHigh').value) || 0;
+    var l = parseFloat(document.getElementById('cLow').value) || 0;
+    if (h === 0 && l === 0) { document.getElementById('cSellPreview').textContent = '— 円'; return; }
+    var sp = Math.floor((h + l) / 2 * 0.98);
+    document.getElementById('cSellPreview').textContent = sp.toLocaleString('ja-JP') + ' 円';
+  }
+  function fmt2(n) { return n.toLocaleString('ja-JP') + '円'; }
+  function runCalc() {
+    var high    = parseFloat(document.getElementById('cHigh').value) || 0;
+    var low     = parseFloat(document.getElementById('cLow').value) || 0;
+    var cost    = parseFloat(document.getElementById('cCost').value) || 0;
+    var buyShip = parseFloat(document.getElementById('cBuyShip').value) || 0;
+    var feeRate = parseFloat(document.getElementById('cFeeSelect').value) || 10;
+    var outsV   = document.getElementById('cOutsource').value;
+    var outsAmt = outsV === 'custom'
+      ? (parseFloat(document.getElementById('cOutsourceCustom').value) || 0)
+      : parseFloat(outsV) || 0;
+    var isOnline = document.getElementById('cSource').value === 'online';
+
+    if (!isOnline) buyShip = 0;
+    if (high === 0 && low === 0) { alert('高値・安値を入力してください'); return; }
+    if (cost === 0) { alert('仕入れ値を入力してください'); return; }
+
+    var sellPrice = Math.floor((high + low) / 2 * 0.98);
+    var feeAmt    = Math.floor(sellPrice * feeRate / 100);
+    var profit    = sellPrice - cost - buyShip - feeAmt - outsAmt;
+    var rate      = sellPrice > 0 ? (profit / sellPrice * 100) : 0;
+
+    // 内訳
+    document.getElementById('rSP').textContent = fmt2(sellPrice);
+    document.getElementById('rCC').textContent = '- ' + fmt2(cost);
+    document.getElementById('rBS').textContent = isOnline ? '- ' + fmt2(buyShip) : '—';
+    document.getElementById('rFF').textContent = '- ' + fmt2(feeAmt);
+    document.getElementById('rOU').textContent = outsAmt > 0 ? '- ' + fmt2(outsAmt) : '—';
+    var prEl = document.getElementById('rPR');
+    prEl.textContent = (profit >= 0 ? '+' : '') + fmt2(profit);
+    prEl.className = 'bv ' + (profit >= 0 ? 'pos' : 'neg');
+
+    // 利益率バー
+    var pct = Math.min(Math.max(rate, 0), 50);
+    var barColor = rate >= 10 ? '#10b981' : rate >= 5 ? '#f59e0b' : '#ef4444';
+    document.getElementById('rRL').textContent = rate.toFixed(1) + '%';
+    var bar = document.getElementById('rRB');
+    bar.style.width = '0%'; bar.style.background = barColor;
+    setTimeout(function(){ bar.style.width = (pct * 2) + '%'; }, 50);
+
+    // 判定
+    var vd = document.getElementById('cVerdict');
+    vd.className = 'verdict2';
+    var icon = document.getElementById('cVIcon');
+    var label = document.getElementById('cVLabel');
+    var reason = document.getElementById('cVReason');
+    // 仕入れ値の価格帯ごとに判定基準を変える
+    var okThresh, warnThresh, bandLabel;
+    if (cost < 1000) {
+      okThresh = 2000; warnThresh = 1000;
+      bandLabel = '仕入れ0〜999円帯';
+    } else if (cost < 10000) {
+      okThresh = 3000; warnThresh = 2000;
+      bandLabel = '仕入れ1000〜9999円帯';
+    } else {
+      okThresh = 5000; warnThresh = 3000;
+      bandLabel = '仕入れ10000〜15000円帯';
+    }
+
+    if (profit < 0) {
+      vd.classList.add('ng');
+      icon.textContent = '❌'; label.textContent = '非推奨';
+      reason.textContent = '赤字 ' + fmt2(Math.abs(profit)) + ' の損失（' + bandLabel + '）';
+    } else if (profit >= okThresh) {
+      vd.classList.add('ok');
+      icon.textContent = '✅'; label.textContent = '推奨';
+      reason.textContent = '利益 ' + fmt2(profit) + ' ／ 基準 ' + fmt2(okThresh) + ' 以上クリア！（' + bandLabel + '）';
+    } else if (profit >= warnThresh) {
+      vd.classList.add('warn');
+      icon.textContent = '⚠️'; label.textContent = '要検討';
+      reason.textContent = '利益 ' + fmt2(profit) + '（推奨まであと ' + fmt2(okThresh - profit) + '）（' + bandLabel + '）';
+    } else {
+      vd.classList.add('ng');
+      icon.textContent = '❌'; label.textContent = '非推奨';
+      reason.textContent = '利益 ' + fmt2(profit) + ' — 基準 ' + fmt2(warnThresh) + ' 未満（' + bandLabel + '）';
+    }
+
+    document.getElementById('calcResult').style.display = 'block';
+
+    // 消化率・ライバル分析（入力があれば）
+    var soldCount  = parseInt(document.getElementById('cSoldCount').value) || 0;
+    var listCount  = parseInt(document.getElementById('cListCount').value) || 0;
+    var highCount  = parseInt(document.getElementById('cHighCount').value) || 0;
+    var lowCount   = parseInt(document.getElementById('cLowCount').value) || 0;
+    var rotEl = document.getElementById('rotationResult');
+    var rotDetail = document.getElementById('rotationDetail');
+
+    if (soldCount > 0 || listCount > 0) {
+      var rows = '';
+
+      // 消化率
+      if (soldCount > 0 && listCount > 0) {
+        var digestRate = soldCount / (soldCount + listCount) * 100;
+        var digestColor, digestText, digestAdvice;
+        if (digestRate >= 50) {
+          digestColor = '#10b981';
+          digestText = '✅ 回転良好（' + digestRate.toFixed(0) + '%）';
+          digestAdvice = '売れ行き好調。強気で仕入れ可。';
+        } else if (digestRate >= 20) {
+          digestColor = '#f59e0b';
+          digestText = '⚠️ 普通（' + digestRate.toFixed(0) + '%）';
+          digestAdvice = '利益率次第。慎重に判断を。';
+        } else {
+          digestColor = '#ef4444';
+          digestText = '❌ 回転が遅い（' + digestRate.toFixed(0) + '%）';
+          digestAdvice = '在庫が長期化するリスクあり。';
+        }
+        rows += '<div class="br"><span class="bk">消化率</span><span class="bv" style="color:' + digestColor + '">' + digestText + '</span></div>';
+        rows += '<div class="br"><span class="bk">アドバイス</span><span class="bv" style="color:#94a3b8;font-size:0.85em;">' + digestAdvice + '</span></div>';
+
+        // 待機日数の目安（売れた件数が3件以上なら信頼度あり）
+        if (soldCount >= 3 && listCount > 0) {
+          var waitDays = listCount / soldCount;
+          var waitText = waitDays < 1 ? '1日以内に売れる可能性大'
+                       : waitDays < 3 ? '約' + waitDays.toFixed(1) + '日で売れる見込み'
+                       : '約' + Math.round(waitDays) + '日待ちの見込み（要注意）';
+          rows += '<div class="br"><span class="bk">売れるまでの目安</span><span class="bv" style="color:#94a3b8;font-size:0.85em;">' + waitText + '</span></div>';
+        } else if (soldCount < 3) {
+          rows += '<div class="br"><span class="bk">データ信頼度</span><span class="bv" style="color:#f59e0b;font-size:0.85em;">⚠️ 売れた件数が少なく参考値</span></div>';
+        }
+      }
+
+      // 高値・安値件数の分析
+      if (highCount > 0 || lowCount > 0) {
+        var priceRiskText, priceRiskColor;
+        if (lowCount >= 3 && highCount < 2) {
+          priceRiskText = '❌ 安値出品が多く高値では売れにくい（安値' + lowCount + '件 / 高値' + highCount + '件）';
+          priceRiskColor = '#ef4444';
+        } else if (highCount >= 2 && lowCount < 3) {
+          priceRiskText = '✅ 高値での成約実績あり（高値' + highCount + '件 / 安値' + lowCount + '件）';
+          priceRiskColor = '#10b981';
+        } else if (lowCount >= 3 && highCount >= 2) {
+          priceRiskText = '⚠️ 高値・安値どちらも競合あり（高値' + highCount + '件 / 安値' + lowCount + '件）';
+          priceRiskColor = '#f59e0b';
+        } else {
+          priceRiskText = '— データ不足（高値' + highCount + '件 / 安値' + lowCount + '件）';
+          priceRiskColor = '#64748b';
+        }
+        rows += '<div class="br"><span class="bk">価格帯リスク</span><span class="bv" style="color:' + priceRiskColor + ';font-size:0.85em;">' + priceRiskText + '</span></div>';
+      }
+
+      rotDetail.innerHTML = '<div class="bdown" style="margin:0;">' + rows + '</div>';
+      rotEl.style.display = 'block';
+    } else {
+      rotEl.style.display = 'none';
+    }
+
+    document.querySelector('#calcModal .calc-body').scrollTo({ top: 99999, behavior: 'smooth' });
+  }
+  function resetCalc2() {
+    ['cCost','cBuyShip','cHigh','cLow','cOutsourceCustom','cSoldCount','cListCount','cHighCount','cLowCount'].forEach(function(id){
+      var el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('rotationResult').style.display = 'none';
+    document.getElementById('cSource').value = 'store';
+    document.getElementById('cFeeSelect').value = '10';
+    document.getElementById('cOutsource').value = '0';
+    document.getElementById('onlineShippingRow').style.display = 'none';
+    document.getElementById('outsourceCustomRow').style.display = 'none';
+    document.getElementById('calcResult').style.display = 'none';
+    document.getElementById('cSellPreview').textContent = '— 円';
+    document.querySelector('#calcModal .calc-body').scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  </script>
+
 <!--======終点:STABLE======-->
 </body>
 </html>
