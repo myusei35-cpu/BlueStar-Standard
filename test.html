@@ -658,14 +658,29 @@
         <div class="cs-label">販売送料</div>
         <select id="cSellShip" onchange="onSellShipChange()">
           <option value="0">送料なし / 込み（0円）</option>
-          <option value="175">らくらくメルカリ便 ネコポス（175円）</option>
-          <option value="210">らくらくメルカリ便 宅急便コンパクト（210円）</option>
-          <option value="230">らくらくメルカリ便 60サイズ（230円）</option>
-          <option value="270">らくらくメルカリ便 80サイズ（270円）</option>
-          <option value="340">らくらくメルカリ便 100サイズ（340円）</option>
-          <option value="520">らくらくメルカリ便 120サイズ（520円）</option>
-          <option value="630">らくらくメルカリ便 140サイズ（630円）</option>
-          <option value="750">らくらくメルカリ便 160サイズ（750円）</option>
+          <optgroup label="── らくらくメルカリ便（ヤマト）──">
+          <option value="210">ネコポス（210円）</option>
+          <option value="450">宅急便コンパクト（450円）</option>
+          <option value="750">宅急便 60サイズ（750円）</option>
+          <option value="850">宅急便 80サイズ（850円）</option>
+          <option value="1050">宅急便 100サイズ（1,050円）</option>
+          <option value="1200">宅急便 120サイズ（1,200円）</option>
+          <option value="1450">宅急便 140サイズ（1,450円）</option>
+          <option value="1700">宅急便 160サイズ（1,700円）</option>
+          </optgroup>
+          <optgroup label="── ゆうゆうメルカリ便（日本郵便）──">
+          <option value="160">ゆうパケットポストmini（160円）</option>
+          <option value="215">ゆうパケットポスト（215円）</option>
+          <option value="230">ゆうパケット（230円）</option>
+          <option value="455">ゆうパケットプラス（455円）</option>
+          <option value="750">ゆうパック 60サイズ（750円）</option>
+          <option value="870">ゆうパック 80サイズ（870円）</option>
+          <option value="1070">ゆうパック 100サイズ（1,070円）</option>
+          <option value="1200">ゆうパック 120サイズ（1,200円）</option>
+          <option value="1450">ゆうパック 140サイズ（1,450円）</option>
+          <option value="1700">ゆうパック 160サイズ（1,700円）</option>
+          <option value="1900">ゆうパック 170サイズ（1,900円）</option>
+          </optgroup>
           <option value="custom">自由入力</option>
         </select>
         <div id="sellShipCustomRow" style="margin-top:8px;display:none;">
