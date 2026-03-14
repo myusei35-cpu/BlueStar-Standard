@@ -729,8 +729,19 @@
             <div class="ci"><input type="number" id="cLowCount" inputmode="numeric" placeholder="0"><span class="u">件</span></div>
           </div>
         </div>
+        <!-- 販売期間（任意） -->
+        <div class="ci2" style="margin-top:8px;">
+          <div class="cf">
+            <label>高値が売れた日数</label>
+            <div class="ci"><input type="number" id="cHighDays" inputmode="numeric" placeholder="例: 3"><span class="u">日</span></div>
+          </div>
+          <div class="cf">
+            <label>安値が売れた日数</label>
+            <div class="ci"><input type="number" id="cLowDays" inputmode="numeric" placeholder="例: 14"><span class="u">日</span></div>
+          </div>
+        </div>
         <div style="margin-top:8px; font-size:0.72em; color:#475569; line-height:1.6;">
-          ※ 入力すると消化率・価格帯リスクを追加判定します（空欄でもOK）
+          ※ 入力すると消化率・価格帯リスク・販売期間を追加判定します（空欄でもOK）
         </div>
       </div>
 
@@ -804,6 +815,8 @@
       ? (parseFloat(document.getElementById('cOutsourceCustom').value) || 0)
       : parseFloat(outsV) || 0;
     var isOnline = document.getElementById('cSource').value === 'online';
+    var highDays = parseInt(document.getElementById('cHighDays').value) || 0;
+    var lowDays  = parseInt(document.getElementById('cLowDays').value)  || 0;
     var sellShipV = document.getElementById('cSellShip').value;
     var sellShip  = sellShipV === 'custom'
       ? (parseFloat(document.getElementById('cSellShipCustom').value) || 0)
@@ -884,60 +897,107 @@
     var rotEl = document.getElementById('rotationResult');
     var rotDetail = document.getElementById('rotationDetail');
 
-    if (soldCount > 0 || listCount > 0) {
-      var rows = '';
+    // ===== 利益率判定（常時表示） =====
+    var rateResult = document.getElementById('rateResult');
+    if (!rateResult) {
+      rateResult = document.createElement('div');
+      rateResult.id = 'rateResult';
+      rateResult.style.marginBottom = '10px';
+      document.getElementById('calcResult').insertBefore(rateResult, document.querySelector('#calcResult .ratebar').nextSibling);
+    }
+    var rateRows = '';
+    var rateColor, rateText, rateAdvice;
+    if (rate >= 40) {
+      rateColor = '#10b981'; rateText = '✅ 強い（' + rate.toFixed(1) + '%）'; rateAdvice = '高利益率。積極的に仕入れ可。';
+    } else if (rate >= 30) {
+      rateColor = '#10b981'; rateText = '✅ 仕入れ可（' + rate.toFixed(1) + '%）'; rateAdvice = '安全ライン30%クリア。';
+    } else if (rate >= 20) {
+      rateColor = '#f59e0b'; rateText = '⚠️ 要検討（' + rate.toFixed(1) + '%）'; rateAdvice = '値下げ・送料変動で崩れる可能性あり。';
+    } else {
+      rateColor = '#ef4444'; rateText = '❌ 非推奨（' + rate.toFixed(1) + '%）'; rateAdvice = '利益率が低すぎます。';
+    }
+    rateRows += '<div class="br"><span class="bk">利益率</span><span class="bv" style="color:' + rateColor + '">' + rateText + '</span></div>';
+    rateRows += '<div class="br"><span class="bk">アドバイス</span><span class="bv" style="color:#94a3b8;font-size:0.85em;">' + rateAdvice + '</span></div>';
 
-      // 消化率
-      if (soldCount > 0 && listCount > 0) {
-        var digestRate = soldCount / (soldCount + listCount) * 100;
-        var digestColor, digestText, digestAdvice;
-        if (digestRate >= 50) {
-          digestColor = '#10b981';
-          digestText = '✅ 回転良好（' + digestRate.toFixed(0) + '%）';
-          digestAdvice = '売れ行き好調。強気で仕入れ可。';
-        } else if (digestRate >= 20) {
-          digestColor = '#f59e0b';
-          digestText = '⚠️ 普通（' + digestRate.toFixed(0) + '%）';
-          digestAdvice = '利益率次第。慎重に判断を。';
-        } else {
-          digestColor = '#ef4444';
-          digestText = '❌ 回転が遅い（' + digestRate.toFixed(0) + '%）';
-          digestAdvice = '在庫が長期化するリスクあり。';
-        }
-        rows += '<div class="br"><span class="bk">消化率</span><span class="bv" style="color:' + digestColor + '">' + digestText + '</span></div>';
-        rows += '<div class="br"><span class="bk">アドバイス</span><span class="bv" style="color:#94a3b8;font-size:0.85em;">' + digestAdvice + '</span></div>';
-
-        // 待機日数の目安（売れた件数が3件以上なら信頼度あり）
-        if (soldCount >= 3 && listCount > 0) {
-          var waitDays = listCount / soldCount;
-          var waitText = waitDays < 1 ? '1日以内に売れる可能性大'
-                       : waitDays < 3 ? '約' + waitDays.toFixed(1) + '日で売れる見込み'
-                       : '約' + Math.round(waitDays) + '日待ちの見込み（要注意）';
-          rows += '<div class="br"><span class="bk">売れるまでの目安</span><span class="bv" style="color:#94a3b8;font-size:0.85em;">' + waitText + '</span></div>';
-        } else if (soldCount < 3) {
-          rows += '<div class="br"><span class="bk">データ信頼度</span><span class="bv" style="color:#f59e0b;font-size:0.85em;">⚠️ 売れた件数が少なく参考値</span></div>';
-        }
+    // ===== 値下げ耐性（sellPrice と cLow の差） =====
+    if (low > 0) {
+      var priceGap = sellPrice - low;
+      var gapColor, gapText;
+      if (priceGap >= 2000) {
+        gapColor = '#10b981'; gapText = '✅ 安全（最安値との差 +' + fmt2(priceGap) + '）';
+      } else if (priceGap >= 1000) {
+        gapColor = '#f59e0b'; gapText = '⚠️ 普通（最安値との差 +' + fmt2(priceGap) + '）';
+      } else if (priceGap >= 0) {
+        gapColor = '#ef4444'; gapText = '❌ 危険（最安値との差 +' + fmt2(priceGap) + '）';
+      } else {
+        gapColor = '#ef4444'; gapText = '❌ 売値が最安値を下回っています（' + fmt2(priceGap) + '）';
       }
+      rateRows += '<div class="br"><span class="bk">値下げ耐性</span><span class="bv" style="color:' + gapColor + ';font-size:0.85em;">' + gapText + '</span></div>';
+    }
 
-      // 高値・安値件数の分析
-      if (highCount > 0 || lowCount > 0) {
-        var priceRiskText, priceRiskColor;
-        if (lowCount >= 3 && highCount < 2) {
-          priceRiskText = '❌ 安値出品が多く高値では売れにくい（安値' + lowCount + '件 / 高値' + highCount + '件）';
-          priceRiskColor = '#ef4444';
-        } else if (highCount >= 2 && lowCount < 3) {
-          priceRiskText = '✅ 高値での成約実績あり（高値' + highCount + '件 / 安値' + lowCount + '件）';
-          priceRiskColor = '#10b981';
-        } else if (lowCount >= 3 && highCount >= 2) {
-          priceRiskText = '⚠️ 高値・安値どちらも競合あり（高値' + highCount + '件 / 安値' + lowCount + '件）';
-          priceRiskColor = '#f59e0b';
-        } else {
-          priceRiskText = '— データ不足（高値' + highCount + '件 / 安値' + lowCount + '件）';
-          priceRiskColor = '#64748b';
-        }
-        rows += '<div class="br"><span class="bk">価格帯リスク</span><span class="bv" style="color:' + priceRiskColor + ';font-size:0.85em;">' + priceRiskText + '</span></div>';
+    rateResult.innerHTML = '<div class="bdown" style="margin:0;">' + rateRows + '</div>';
+
+    // 各項目を独立して判定・入力があった項目だけ追加表示
+    var rows = '';
+
+    // 消化率（売れた件数＋出品数が両方あるとき）
+    if (soldCount > 0 && listCount > 0) {
+      var digestRate = soldCount / (soldCount + listCount) * 100;
+      var digestColor, digestText, digestAdvice;
+      if (digestRate >= 50) {
+        digestColor = '#10b981'; digestText = '✅ 回転良好（' + digestRate.toFixed(0) + '%）'; digestAdvice = '売れ行き好調。強気で仕入れ可。';
+      } else if (digestRate >= 20) {
+        digestColor = '#f59e0b'; digestText = '⚠️ 普通（' + digestRate.toFixed(0) + '%）'; digestAdvice = '利益率次第。慎重に判断を。';
+      } else {
+        digestColor = '#ef4444'; digestText = '❌ 回転が遅い（' + digestRate.toFixed(0) + '%）'; digestAdvice = '在庫が長期化するリスクあり。';
       }
+      rows += '<div class="br"><span class="bk">消化率</span><span class="bv" style="color:' + digestColor + '">' + digestText + '</span></div>';
+      rows += '<div class="br"><span class="bk">アドバイス</span><span class="bv" style="color:#94a3b8;font-size:0.85em;">' + digestAdvice + '</span></div>';
+      if (soldCount >= 3) {
+        var waitDays = listCount / soldCount;
+        var waitText = waitDays < 1 ? '1日以内に売れる可能性大'
+                     : waitDays < 3 ? '約' + waitDays.toFixed(1) + '日で売れる見込み'
+                     : '約' + Math.round(waitDays) + '日待ちの見込み（要注意）';
+        rows += '<div class="br"><span class="bk">売れるまでの目安</span><span class="bv" style="color:#94a3b8;font-size:0.85em;">' + waitText + '</span></div>';
+      } else {
+        rows += '<div class="br"><span class="bk">データ信頼度</span><span class="bv" style="color:#f59e0b;font-size:0.85em;">⚠️ 売れた件数が少なく参考値</span></div>';
+      }
+    }
 
+    // 出品数（出品数だけあればOK）
+    if (listCount > 0) {
+      var supplyColor, supplyText;
+      if (listCount <= 10)      { supplyColor = '#10b981'; supplyText = '✅ 少ない（' + listCount + '件）競合少なく売りやすい'; }
+      else if (listCount <= 30) { supplyColor = '#f59e0b'; supplyText = '⚠️ 普通（' + listCount + '件）'; }
+      else                      { supplyColor = '#ef4444'; supplyText = '❌ 競合多い（' + listCount + '件）価格競争に注意'; }
+      rows += '<div class="br"><span class="bk">出品数（供給量）</span><span class="bv" style="color:' + supplyColor + ';font-size:0.85em;">' + supplyText + '</span></div>';
+    }
+
+    // 価格帯リスク（高値件数か安値件数があればOK）
+    if (highCount > 0 || lowCount > 0) {
+      var priceRiskText, priceRiskColor;
+      if (lowCount >= 3 && highCount < 2)      { priceRiskText = '❌ 安値出品が多く高値では売れにくい（安値' + lowCount + '件 / 高値' + highCount + '件）'; priceRiskColor = '#ef4444'; }
+      else if (highCount >= 2 && lowCount < 3) { priceRiskText = '✅ 高値での成約実績あり（高値' + highCount + '件 / 安値' + lowCount + '件）'; priceRiskColor = '#10b981'; }
+      else if (lowCount >= 3 && highCount >= 2){ priceRiskText = '⚠️ 高値・安値どちらも競合あり（高値' + highCount + '件 / 安値' + lowCount + '件）'; priceRiskColor = '#f59e0b'; }
+      else                                     { priceRiskText = '— データ不足（高値' + highCount + '件 / 安値' + lowCount + '件）'; priceRiskColor = '#64748b'; }
+      rows += '<div class="br"><span class="bk">価格帯リスク</span><span class="bv" style="color:' + priceRiskColor + ';font-size:0.85em;">' + priceRiskText + '</span></div>';
+    }
+
+    // 販売期間（高値日数か安値日数があればOK）
+    if (highDays > 0 || lowDays > 0) {
+      var evalDays = function(days, label) {
+        var dc, dt;
+        if (days <= 3)       { dc = '#10b981'; dt = '✅ 神（' + days + '日）'; }
+        else if (days <= 7)  { dc = '#10b981'; dt = '✅ 良い（' + days + '日）'; }
+        else if (days <= 30) { dc = '#f59e0b'; dt = '⚠️ 普通（' + days + '日）'; }
+        else                 { dc = '#ef4444'; dt = '❌ 遅い（' + days + '日）'; }
+        return '<div class="br"><span class="bk">販売期間（' + label + '）</span><span class="bv" style="color:' + dc + ';font-size:0.85em;">' + dt + '</span></div>';
+      };
+      if (highDays > 0) rows += evalDays(highDays, '高値');
+      if (lowDays  > 0) rows += evalDays(lowDays,  '安値');
+    }
+
+    if (rows) {
       rotDetail.innerHTML = '<div class="bdown" style="margin:0;">' + rows + '</div>';
       rotEl.style.display = 'block';
     } else {
@@ -951,7 +1011,7 @@
     document.getElementById('sellShipCustomRow').style.display = v === 'custom' ? 'block' : 'none';
   }
   function resetCalc2() {
-    ['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom','cSoldCount','cListCount','cHighCount','cLowCount'].forEach(function(id){
+    ['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom','cSoldCount','cListCount','cHighCount','cLowCount','cHighDays','cLowDays'].forEach(function(id){
       var el = document.getElementById(id); if(el) el.value = '';
     });
     document.getElementById('rotationResult').style.display = 'none';
