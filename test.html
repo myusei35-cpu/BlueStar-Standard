@@ -653,6 +653,29 @@
         </select>
       </div>
 
+      <!-- 販売送料（共通） -->
+      <div class="cs">
+        <div class="cs-label">販売送料</div>
+        <select id="cSellShip" onchange="onSellShipChange()">
+          <option value="0">送料なし / 込み（0円）</option>
+          <option value="175">らくらくメルカリ便 ネコポス（175円）</option>
+          <option value="210">らくらくメルカリ便 宅急便コンパクト（210円）</option>
+          <option value="230">らくらくメルカリ便 60サイズ（230円）</option>
+          <option value="270">らくらくメルカリ便 80サイズ（270円）</option>
+          <option value="340">らくらくメルカリ便 100サイズ（340円）</option>
+          <option value="520">らくらくメルカリ便 120サイズ（520円）</option>
+          <option value="630">らくらくメルカリ便 140サイズ（630円）</option>
+          <option value="750">らくらくメルカリ便 160サイズ（750円）</option>
+          <option value="custom">自由入力</option>
+        </select>
+        <div id="sellShipCustomRow" style="margin-top:8px;display:none;">
+          <div class="cf">
+            <label>販売送料（手入力）</label>
+            <div class="ci"><input type="number" id="cSellShipCustom" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+          </div>
+        </div>
+      </div>
+
       <!-- 外注手数料 -->
       <div class="cs">
         <div class="cs-label">外注手数料</div>
@@ -710,6 +733,7 @@
           <div class="br"><span class="bk">売れる価格</span><span class="bv" id="rSP"></span></div>
           <div class="br"><span class="bk">　└ 仕入れ値</span><span class="bv neg" id="rCC"></span></div>
           <div class="br"><span class="bk">　└ 仕入れ送料</span><span class="bv neg" id="rBS"></span></div>
+          <div class="br"><span class="bk">　└ 販売送料</span><span class="bv neg" id="rSS"></span></div>
           <div class="br"><span class="bk">　└ 販売手数料</span><span class="bv neg" id="rFF"></span></div>
           <div class="br"><span class="bk">　└ 外注手数料</span><span class="bv neg" id="rOU"></span></div>
           <div class="br btotal"><span class="bk">純利益</span><span class="bv" id="rPR"></span></div>
@@ -765,6 +789,10 @@
       ? (parseFloat(document.getElementById('cOutsourceCustom').value) || 0)
       : parseFloat(outsV) || 0;
     var isOnline = document.getElementById('cSource').value === 'online';
+    var sellShipV = document.getElementById('cSellShip').value;
+    var sellShip  = sellShipV === 'custom'
+      ? (parseFloat(document.getElementById('cSellShipCustom').value) || 0)
+      : parseFloat(sellShipV) || 0;
 
     if (!isOnline) buyShip = 0;
     if (high === 0 && low === 0) { alert('高値・安値を入力してください'); return; }
@@ -772,13 +800,14 @@
 
     var sellPrice = Math.floor((high + low) / 2 * 0.98);
     var feeAmt    = Math.floor(sellPrice * feeRate / 100);
-    var profit    = sellPrice - cost - buyShip - feeAmt - outsAmt;
+    var profit    = sellPrice - cost - buyShip - sellShip - feeAmt - outsAmt;
     var rate      = sellPrice > 0 ? (profit / sellPrice * 100) : 0;
 
     // 内訳
     document.getElementById('rSP').textContent = fmt2(sellPrice);
     document.getElementById('rCC').textContent = '- ' + fmt2(cost);
     document.getElementById('rBS').textContent = isOnline ? '- ' + fmt2(buyShip) : '—';
+    document.getElementById('rSS').textContent = sellShip > 0 ? '- ' + fmt2(sellShip) : '—';
     document.getElementById('rFF').textContent = '- ' + fmt2(feeAmt);
     document.getElementById('rOU').textContent = outsAmt > 0 ? '- ' + fmt2(outsAmt) : '—';
     var prEl = document.getElementById('rPR');
@@ -902,14 +931,20 @@
 
     document.querySelector('#calcModal .calc-body').scrollTo({ top: 99999, behavior: 'smooth' });
   }
+  function onSellShipChange() {
+    var v = document.getElementById('cSellShip').value;
+    document.getElementById('sellShipCustomRow').style.display = v === 'custom' ? 'block' : 'none';
+  }
   function resetCalc2() {
-    ['cCost','cBuyShip','cHigh','cLow','cOutsourceCustom','cSoldCount','cListCount','cHighCount','cLowCount'].forEach(function(id){
+    ['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom','cSoldCount','cListCount','cHighCount','cLowCount'].forEach(function(id){
       var el = document.getElementById(id); if(el) el.value = '';
     });
     document.getElementById('rotationResult').style.display = 'none';
     document.getElementById('cSource').value = 'store';
     document.getElementById('cFeeSelect').value = '10';
     document.getElementById('cOutsource').value = '0';
+    document.getElementById('cSellShip').value = '0';
+    document.getElementById('sellShipCustomRow').style.display = 'none';
     document.getElementById('onlineShippingRow').style.display = 'none';
     document.getElementById('outsourceCustomRow').style.display = 'none';
     document.getElementById('calcResult').style.display = 'none';
