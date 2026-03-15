@@ -418,12 +418,23 @@
     var img = new Image();
     var url = URL.createObjectURL(file);
     img.onload = function() {
-      URL.revokeObjectURL(url); 
       var canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
+      // 画像を最大1200pxに圧縮してメモリ負荷を軽減
+      var maxSize = 1200;
+      var w = img.width;
+      var h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else       { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      canvas.width = w;
+      canvas.height = h;
       var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // 元画像のメモリを解放
+      URL.revokeObjectURL(url);
+      img.src = '';
 
       canvas.toBlob(function(blob) {
         var correctedFile = new File([blob], "image.jpg", { type: "image/jpeg" });
@@ -444,6 +455,9 @@
         doc.body.appendChild(form);
         form.submit();
 
+        // 転送後にcanvas・ファイルデータをメモリから解放
+        canvas.width = 0;
+        canvas.height = 0;
         document.getElementById('lensSubmitBtn').style.display = 'none';
         fileInput.value = '';
       }, 'image/jpeg', 0.9);
