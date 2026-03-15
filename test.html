@@ -318,6 +318,7 @@
   const inputField = document.getElementById('keyword');
   const suggestionBox = document.getElementById('suggestionBox');
 
+  /* サジェスト一時無効化（テスト用）
   inputField.addEventListener('input', function() {
     const val = this.value;
     suggestionBox.innerHTML = ''; 
@@ -347,6 +348,7 @@
       suggestionBox.style.display = 'none'; 
     }
   });
+  */
 
   document.addEventListener('click', function(e) {
     if (e.target !== inputField && e.target !== suggestionBox) suggestionBox.style.display = 'none';
