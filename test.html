@@ -318,37 +318,40 @@
   const inputField = document.getElementById('keyword');
   const suggestionBox = document.getElementById('suggestionBox');
 
-  /* サジェスト一時無効化（テスト用）
+  var suggestionTimer = null;
   inputField.addEventListener('input', function() {
     const val = this.value;
-    suggestionBox.innerHTML = ''; 
+    suggestionBox.innerHTML = '';
     if (!val) { suggestionBox.style.display = 'none'; return; }
 
-    const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
-    let matches = [];
+    // デバウンス：300ms入力が止まってから検索
+    clearTimeout(suggestionTimer);
+    suggestionTimer = setTimeout(function() {
+      const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
+      let matches = [];
 
-    if (isEnglishInput) {
-      const lowerVal = val.toLowerCase();
-      matches = brandDictionary.filter(b => b.en.toLowerCase().startsWith(lowerVal)).map(b => b.en); 
-    } else {
-      const kataVal = hiraToKata(val);
-      matches = brandDictionary.filter(b => b.kana.startsWith(kataVal)).map(b => b.kana); 
-    }
+      if (isEnglishInput) {
+        const lowerVal = val.toLowerCase();
+        matches = brandDictionary.filter(b => b.en.toLowerCase().startsWith(lowerVal)).map(b => b.en);
+      } else {
+        const kataVal = hiraToKata(val);
+        matches = brandDictionary.filter(b => b.kana.startsWith(kataVal)).map(b => b.kana);
+      }
 
-    if (matches.length > 0) {
-      matches.forEach(brandName => {
-        const div = document.createElement('div');
-        div.className = 'suggestion-item';
-        div.textContent = brandName; 
-        div.onclick = function() { inputField.value = brandName; suggestionBox.style.display = 'none'; };
-        suggestionBox.appendChild(div);
-      });
-      suggestionBox.style.display = 'block'; 
-    } else {
-      suggestionBox.style.display = 'none'; 
-    }
+      if (matches.length > 0) {
+        matches.forEach(brandName => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.textContent = brandName;
+          div.onclick = function() { inputField.value = brandName; suggestionBox.style.display = 'none'; };
+          suggestionBox.appendChild(div);
+        });
+        suggestionBox.style.display = 'block';
+      } else {
+        suggestionBox.style.display = 'none';
+      }
+    }, 300);
   });
-  */
 
   document.addEventListener('click', function(e) {
     if (e.target !== inputField && e.target !== suggestionBox) suggestionBox.style.display = 'none';
