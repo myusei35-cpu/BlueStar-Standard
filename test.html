@@ -380,14 +380,7 @@
 
   function openFinalURL(url) {
     var targetPath = url.replace(/^https?:\/\//, '');
-    // メルカリURLはメルカリアプリを直接指定
-    var isMercari = url.includes('jp.mercari.com');
-    var intentUrl;
-    if (isMercari) {
-      intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=com.mercari.jp;end;';
-    } else {
-      intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
-    }
+    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
@@ -782,8 +775,10 @@
           <button class="copy-btn" onclick="copyPlan()">📋 コピーする</button>
         </div>
 
-        <button class="calc-reset" onclick="resetCalc2()">↺ リセット</button>
       </div>
+
+      <!-- リセットボタン（常時表示） -->
+      <button class="calc-reset" onclick="resetCalc2()">↺ リセット</button>
 
     </div>
   </div>
