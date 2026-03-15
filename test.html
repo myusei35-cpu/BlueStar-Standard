@@ -380,7 +380,14 @@
 
   function openFinalURL(url) {
     var targetPath = url.replace(/^https?:\/\//, '');
-    var intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
+    // メルカリURLはメルカリアプリを直接指定
+    var isMercari = url.includes('jp.mercari.com');
+    var intentUrl;
+    if (isMercari) {
+      intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=com.mercari.jp;end;';
+    } else {
+      intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;end;';
+    }
     var a = document.createElement('a');
     a.href = intentUrl;
     document.body.appendChild(a);
