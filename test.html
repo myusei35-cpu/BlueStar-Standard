@@ -568,9 +568,10 @@
     .rbbg { background: #263348; border-radius: 99px; height: 9px; overflow: hidden; }
     .rbfill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
 
-    /* コピペ出力エリア */
-    .copy-area { background: #0f172a; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
-    .copy-area pre { color: #cbd5e1; font-size: 0.78em; line-height: 1.7; white-space: pre-wrap; word-break: break-all; margin: 0; font-family: monospace; }
+    /* 出力ブロック共通 */
+    .output-block { background: #0f172a; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .output-block-label { font-size: 0.68em; font-weight: 700; letter-spacing: 2px; color: #64748b; margin-bottom: 8px; }
+    .output-block pre { color: #cbd5e1; font-size: 0.78em; line-height: 1.7; white-space: pre-wrap; word-break: break-all; margin: 0; font-family: monospace; }
     .copy-btn { width: 100%; background: #059669; color: #fff; border: none; border-radius: 10px; padding: 11px; font-size: 0.95em; font-weight: 700; cursor: pointer; margin-top: 8px; }
     .copy-btn:active { background: #047857; }
 
@@ -708,7 +709,7 @@
 
       <!-- 任意：回転率・競合データ -->
       <div class="cs">
-        <div class="cs-label">🔵 回転率・競合データ（任意）</div>
+        <div class="cs-label">🔵 回転率・ライバル分析（任意）</div>
         <div class="ci2">
           <div class="cf">
             <label>売れた件数</label>
@@ -722,6 +723,16 @@
         <div class="cf" style="margin-top:8px;">
           <label>売れた日数（何日で売れたか）</label>
           <div class="ci"><input type="number" id="cSoldDays" inputmode="numeric" placeholder="未入力でも可"><span class="u">日</span></div>
+        </div>
+        <div class="ci2" style="margin-top:8px;">
+          <div class="cf">
+            <label>販売中の最安値（任意）</label>
+            <div class="ci"><input type="number" id="cRivalLow" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+          </div>
+          <div class="cf">
+            <label>管理番号プレフィックス</label>
+            <div class="ci"><input type="text" id="cPrefix" placeholder="B" style="text-align:left;"><span class="u" style="display:none;"></span></div>
+          </div>
         </div>
       </div>
 
@@ -787,11 +798,24 @@
           <div class="br"><span class="bk">予想収支</span><span class="bv" id="rNet"></span></div>
         </div>
 
-        <!-- コピペ出力 -->
-        <div class="copy-area" id="copyArea" style="display:none;">
-          <div class="cs-label">📋 販売計画（コピペ用）</div>
-          <pre id="copyText"></pre>
-          <button class="copy-btn" onclick="copyPlan()">📋 コピーする</button>
+        <!-- ブロック1：相場分析と戦略（確認用・コピーボタン不要） -->
+        <div class="output-block" id="block1Area" style="display:none;">
+          <div class="output-block-label">📝 相場分析と戦略（確認用）</div>
+          <pre id="block1Text"></pre>
+        </div>
+
+        <!-- ブロック2：値下げスケジュール（コピーボタン付き） -->
+        <div class="output-block" id="block2Area" style="display:none;">
+          <div class="output-block-label">🗓️ 値下げスケジュール（スプシ用）</div>
+          <pre id="block2Text"></pre>
+          <button class="copy-btn" onclick="copyBlock('block2Text', this)">📋 クリップボードにコピー</button>
+        </div>
+
+        <!-- ブロック3：管理番号（コピーボタン付き） -->
+        <div class="output-block" id="block3Area" style="display:none;">
+          <div class="output-block-label">🔑 管理番号（出品ページ用）</div>
+          <pre id="block3Text"></pre>
+          <button class="copy-btn" onclick="copyBlock('block3Text', this)">📋 クリップボードにコピー</button>
         </div>
 
       </div>
@@ -835,6 +859,59 @@
     document.getElementById('cSellPreview').textContent = sp.toLocaleString('ja-JP') + ' 円';
   }
 
+  // クリップボードコピー共通関数
+  function copyBlock(preId, btn) {
+    var text = document.getElementById(preId).textContent;
+    var origText = btn.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = '✅ コピーしました！';
+        setTimeout(function() { btn.textContent = origText; }, 2000);
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      btn.textContent = '✅ コピーしました！';
+      setTimeout(function() { btn.textContent = origText; }, 2000);
+    }
+  }
+
+  // 日割りループ生成
+  function buildSchedule(startPrice, targetPrice, dailyDown) {
+    var lines = [];
+    var cur = startPrice;
+    var day = 0;
+    var maxDays = 365; // 無限ループ防止
+    while (cur > targetPrice && day < maxDays) {
+      day++;
+      var next = cur - dailyDown;
+      if (next <= targetPrice) {
+        lines.push('最終' + day + '日後に' + targetPrice.toLocaleString('ja-JP') + '円');
+        break;
+      }
+      lines.push(day + '日後に' + next.toLocaleString('ja-JP') + '円');
+      cur = next;
+    }
+    return lines.join('\n');
+  }
+
+  // 今日の日付MMDD
+  function getTodayMMDD() {
+    var d = new Date();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return mm + dd;
+  }
+
+  // 金額を1000で割って小数第1位
+  function toK(n) {
+    return (Math.round(n / 100) / 10).toFixed(1).replace(/\.0$/, '');
+  }
+
   function runCalc() {
     // ── 入力取得 ──
     var cost      = parseFloat(document.getElementById('cCost').value)     || 0;
@@ -850,6 +927,8 @@
     var soldCount = parseInt(document.getElementById('cSoldCount').value)   || 0;
     var listCount = parseInt(document.getElementById('cListCount').value)   || 0;
     var soldDays  = parseInt(document.getElementById('cSoldDays').value)    || 0;
+    var rivalLow  = parseFloat(document.getElementById('cRivalLow').value) || 0;
+    var prefix    = document.getElementById('cPrefix').value.trim() || 'B';
     var isSeasonal= document.getElementById('chkSeasonal').checked;
     var isInstant = document.getElementById('chkInstant').checked;
 
@@ -860,13 +939,18 @@
     // ── 基本計算 ──
     var sellPrice = round100((high + low) / 2 * 0.98);
     var fee       = Math.floor(sellPrice * feeRate / 100);
-    var income    = sellPrice - fee - ship - outs;   // 収支（販売側）
-    var totalCost = cost + buyShip;                  // 仕入れ総コスト
-    var profit    = income - totalCost;              // 純利益
+    var income    = sellPrice - fee - ship - outs;
+    var totalCost = cost + buyShip;
+    var profit    = income - totalCost;
     var roi       = totalCost > 0 ? (profit / totalCost * 100) : 0;
 
+    // 損益分岐点（純利益=0となる売値、切り上げ）
+    var breakeven = Math.ceil((totalCost + ship + outs) / (1 - feeRate / 100));
+
     // 最悪想定（安値ベース）
-    var worstIncome = round100(low * 0.98) - Math.floor(round100(low * 0.98) * feeRate / 100) - ship - outs;
+    var worstSell   = round100(low * 0.98);
+    var worstFee    = Math.floor(worstSell * feeRate / 100);
+    var worstIncome = worstSell - worstFee - ship - outs;
     var worstProfit = worstIncome - totalCost;
 
     // ── 収支表示 ──
@@ -881,7 +965,6 @@
     prEl.className = 'bv ' + (profit >= 0 ? 'pos' : 'neg');
     document.getElementById('rROI').textContent = roi.toFixed(1) + '%';
     document.getElementById('rROI').className   = 'bv ' + (roi >= 0 ? 'pos' : 'neg');
-    // 利益率バー
     var pct = Math.min(Math.max(roi, 0), 60);
     var barColor = roi >= 30 ? '#10b981' : roi >= 20 ? '#f59e0b' : '#ef4444';
     document.getElementById('rRL').textContent = roi.toFixed(1) + '%';
@@ -905,20 +988,20 @@
     var reason= document.getElementById('cVReason');
     vd.className = 'verdict2';
 
-    // 足切り失敗
     if (profit < okProfit || roi < okROI) {
       vd.classList.add('ng');
       icon.textContent  = '❌';
       label.textContent = '非推奨';
       reason.textContent= '利益・ROI基準未達（' + bandLabel + '）純利益基準:' + fmt(okProfit) + ' / ROI基準:' + okROI + '%';
       document.getElementById('scoreArea').style.display = 'none';
-      document.getElementById('copyArea').style.display  = 'none';
+      document.getElementById('block1Area').style.display = 'none';
+      document.getElementById('block2Area').style.display = 'none';
+      document.getElementById('block3Area').style.display = 'none';
       document.getElementById('calcResult').style.display = 'block';
       document.querySelector('#calcModal .calc-body').scrollTo({ top: 99999, behavior: 'smooth' });
       return;
     }
 
-    // 任意項目が何も入力されていない → 簡易判定クリア
     var hasOptional = (soldCount > 0 || listCount > 0 || soldDays > 0 || isSeasonal || isInstant);
 
     if (!hasOptional) {
@@ -927,8 +1010,8 @@
       label.textContent = '簡易判定クリア';
       reason.textContent= 'STEP1通過（' + bandLabel + '）詳細判定は未実施';
       document.getElementById('scoreArea').style.display = 'none';
-      showCopyArea(high, low, sellPrice, listCount, soldDays);
       document.getElementById('calcResult').style.display = 'block';
+      showOutputBlocks(high, low, sellPrice, breakeven, listCount, rivalLow, profit, roi, okProfit, okROI, feeRate, ship, outs, totalCost, prefix);
       document.querySelector('#calcModal .calc-body').scrollTo({ top: 99999, behavior: 'smooth' });
       return;
     }
@@ -941,12 +1024,10 @@
     var sc5 = soldCount === 1 ? 0 : 1;
     var totalScore = sc1 + sc2 + sc3 + sc4 + sc5;
 
-    // 特殊ペナルティ・ボーナス
     var penalty = 0;
     var bonus   = 0;
     var penaltyApplied = false;
     if (isSeasonal && listCount >= soldCount && soldCount > 0) {
-      // 真の枯渇チェック
       if (soldCount >= listCount * 2) {
         penaltyApplied = false;
       } else {
@@ -958,7 +1039,6 @@
 
     totalScore = Math.min(5, totalScore + penalty + bonus);
 
-    // スコア詳細表示
     document.getElementById('scoreArea').style.display = 'block';
     var dot = function(n) { return n ? '✅ +1' : '❌ 0'; };
     document.getElementById('s1').textContent = soldDays > 0 ? dot(sc1) + '（' + soldDays + '日）' : '— 未入力';
@@ -979,7 +1059,6 @@
       document.getElementById('sBonusRow').style.display = 'none';
     }
 
-    // 星評価
     var roiStar   = roi >= 60 ? 5 : roi >= 40 ? 4 : roi >= 30 ? 3 : roi >= 20 ? 2 : 1;
     var speedStar = soldDays === 0 ? 1 : soldDays <= 3 ? 5 : soldDays <= 7 ? 4 : soldDays <= 14 ? 3 : soldDays <= 30 ? 2 : 1;
     document.getElementById('sROI').textContent   = stars(roiStar)   + ' ROI ' + roi.toFixed(1) + '%';
@@ -992,101 +1071,181 @@
       icon.textContent  = '✅';
       label.textContent = '推奨';
       reason.textContent= 'スコア ' + totalScore + '/5（' + bandLabel + '）';
-      showCopyArea(high, low, sellPrice, listCount, soldDays);
     } else if (totalScore >= 2) {
       vd.classList.add('warn');
       icon.textContent  = '⚠️';
       label.textContent = '要検討';
       reason.textContent= 'スコア ' + totalScore + '/5（' + bandLabel + '）';
-      showCopyArea(high, low, sellPrice, listCount, soldDays);
     } else {
       vd.classList.add('ng');
       icon.textContent  = '❌';
       label.textContent = '非推奨';
       reason.textContent= 'スコア ' + totalScore + '/5（' + bandLabel + '）';
-      document.getElementById('copyArea').style.display = 'none';
+      document.getElementById('block1Area').style.display = 'none';
+      document.getElementById('block2Area').style.display = 'none';
+      document.getElementById('block3Area').style.display = 'none';
+      document.getElementById('calcResult').style.display = 'block';
+      document.querySelector('#calcModal .calc-body').scrollTo({ top: 99999, behavior: 'smooth' });
+      return;
     }
+
+    // 推奨・要検討の場合は必ず出力ブロックを表示
+    showOutputBlocks(high, low, sellPrice, breakeven, listCount, rivalLow, profit, roi, okProfit, okROI, feeRate, ship, outs, totalCost, prefix);
 
     document.getElementById('calcResult').style.display = 'block';
     document.querySelector('#calcModal .calc-body').scrollTo({ top: 99999, behavior: 'smooth' });
   }
 
-  function showCopyArea(high, low, sellPrice, listCount, soldDays) {
-    // 日割り計算
-    var startPrice;
+  function showOutputBlocks(high, low, sellPrice, breakeven, listCount, rivalLow, profit, roi, okProfit, okROI, feeRate, ship, outs, totalCost, prefix) {
+
+    // ── ライバルパターン判定 ──
+    var pattern;
+    if (rivalLow <= 0 || listCount <= 0) {
+      pattern = 0; // ライバル不在
+    } else if (rivalLow >= sellPrice) {
+      pattern = 'A'; // 適正価格
+    } else if (rivalLow >= sellPrice * 0.8) {
+      pattern = 'B'; // 少し安い
+    } else {
+      pattern = 'C'; // 異常安値
+    }
+
+    // パターンBの場合：スタート・目標・利益・判定を再計算
+    var startPrice = high;
+    var targetPrice = sellPrice;
+    var effectiveProfit = profit;
+    var effectiveROI    = roi;
+
+    if (pattern === 'B') {
+      startPrice  = rivalLow;
+      targetPrice = low; // 目標を「安値」に変更
+
+      // 安値ベースで利益再計算
+      var bFee     = Math.floor(low * feeRate / 100);
+      var bIncome  = low - bFee - ship - outs;
+      effectiveProfit = bIncome - totalCost;
+      effectiveROI    = totalCost > 0 ? (effectiveProfit / totalCost * 100) : 0;
+
+      // 判定の再計算・UI反映
+      var vd    = document.getElementById('cVerdict');
+      var icon  = document.getElementById('cVIcon');
+      var label = document.getElementById('cVLabel');
+      var reason= document.getElementById('cVReason');
+      vd.className = 'verdict2';
+      if (effectiveProfit < okProfit || effectiveROI < okROI) {
+        vd.classList.add('ng');
+        icon.textContent  = '❌';
+        label.textContent = '非推奨（ライバル追従後）';
+        reason.textContent= '安値着地で利益基準未達（純利益' + (effectiveProfit >= 0 ? '+' : '') + effectiveProfit.toLocaleString('ja-JP') + '円）';
+      } else {
+        // 既存判定を維持しつつ注記追加
+        reason.textContent += '　※ライバル追従後利益:' + (effectiveProfit >= 0 ? '+' : '') + effectiveProfit.toLocaleString('ja-JP') + '円';
+      }
+    }
+
+    // ── ブロック1：相場分析と戦略 ──
+    var b1 = '新しい順、売り切れ、目立った傷や汚れなしで検索の結果、同商品が' +
+      low.toLocaleString('ja-JP') + '円～' + high.toLocaleString('ja-JP') + '円の相場で売れている。' +
+      '最低でも' + low.toLocaleString('ja-JP') + '円では売れると考えられる事から' +
+      sellPrice.toLocaleString('ja-JP') + '円で売れると見込まれる。';
+
+    if (pattern === 0) {
+      b1 += '\n現在、同商品のライバルは不在のため、' + startPrice.toLocaleString('ja-JP') + '円からスタートして、';
+    } else if (pattern === 'A') {
+      b1 += '\n新しい順、販売中、目立った傷や汚れなしの同商品のライバルが' + listCount + '件、' +
+        'そのうち最安が' + rivalLow.toLocaleString('ja-JP') + '円だから、' +
+        startPrice.toLocaleString('ja-JP') + '円からスタートして、';
+    } else if (pattern === 'B') {
+      b1 += '\n現在、同商品の強力なライバル（プロ）が' + listCount + '件、' +
+        '最安' + rivalLow.toLocaleString('ja-JP') + '円で出品中。' +
+        'この価格帯は強敵となるため相場に追従し、ライバルと同額の' + startPrice.toLocaleString('ja-JP') + '円からスタート。' +
+        'ページ作りの質と毎日の上位表示（100円値下げ）で確実に競り勝つ戦略をとるため、';
+    } else if (pattern === 'C') {
+      b1 += '\n現在、' + rivalLow.toLocaleString('ja-JP') + '円の異常安値（素人）の出品があるが、' +
+        '相場乖離が激しいため競合と見なさない。売り切れを待ち、本来の相場を目指すため強気の' +
+        startPrice.toLocaleString('ja-JP') + '円からスタートして、';
+    }
+
+    document.getElementById('block1Text').textContent = b1;
+    document.getElementById('block1Area').style.display = 'block';
+
+    // ── ブロック2：値下げスケジュール ──
+    var totalDown = startPrice - targetPrice;
     var dailyDown;
-    var totalDown = high - sellPrice;
-    if (totalDown < 600) {
-      // 差額が小さい場合：スタート価格を売れる価格+600に再設定
-      startPrice = sellPrice + 600;
-      dailyDown  = 100;
+    if (totalDown <= 0) {
+      dailyDown = 100;
     } else {
-      startPrice = high;
-      dailyDown  = Math.round((totalDown / 6) / 100) * 100;
-      if (dailyDown === 0) dailyDown = 100; // フェイルセーフ
-    }
-    var p = function(n) { return (startPrice - dailyDown * n).toLocaleString('ja-JP'); };
-
-    var plan = '';
-    if (listCount >= 1) {
-      // Bパターン
-      plan = '新しい順、販売中、目立った傷や汚れなし\n' +
-        'の同商品のライバルが' + listCount + '件、そのうち最安が' + low.toLocaleString('ja-JP') + '円だから' + startPrice.toLocaleString('ja-JP') + '円からスタートし\n' +
-        '1日後に' + p(1) + '円\n' +
-        '2日後に' + p(2) + '円\n' +
-        '3日後に' + p(3) + '円\n' +
-        '4日後に' + p(4) + '円\n' +
-        '5日後に' + p(5) + '円\n' +
-        '6日後に' + p(6) + '円\n' +
-        '最終7日後に' + sellPrice.toLocaleString('ja-JP') + '円';
-    } else {
-      // Aパターン
-      plan = '新しい順、売り切れ、目立った傷や汚れなしで\n' +
-        '検索の結果、\n' +
-        '同商品が' + low.toLocaleString('ja-JP') + '円～' + high.toLocaleString('ja-JP') + '円の相場で売れている。\n' +
-        '最低でも' + low.toLocaleString('ja-JP') + '円では売れると考えられる事から\n' +
-        sellPrice.toLocaleString('ja-JP') + '円で売れると見込まれる。\n' +
-        'よって' + startPrice.toLocaleString('ja-JP') + '円からスタートして、\n' +
-        '1日後に' + p(1) + '円\n' +
-        '2日後に' + p(2) + '円\n' +
-        '3日後に' + p(3) + '円\n' +
-        '4日後に' + p(4) + '円\n' +
-        '5日後に' + p(5) + '円\n' +
-        '6日後に' + p(6) + '円\n' +
-        '最終7日後に' + sellPrice.toLocaleString('ja-JP') + '円';
+      dailyDown = round100(totalDown / 6);
+      if (dailyDown < 100) dailyDown = 100;
+      if (dailyDown > 300) dailyDown = 300;
     }
 
-    document.getElementById('copyText').textContent = plan;
-    document.getElementById('copyArea').style.display = 'block';
-  }
+    var b2 = buildSchedule(startPrice, targetPrice, dailyDown);
 
-  function copyPlan() {
-    var text = document.getElementById('copyText').textContent;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(function() {
-        var btn = document.querySelector('.copy-btn');
-        btn.textContent = '✅ コピーしました！';
-        setTimeout(function() { btn.textContent = '📋 コピーする'; }, 2000);
-      });
-    } else {
-      var ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      var btn = document.querySelector('.copy-btn');
-      btn.textContent = '✅ コピーしました！';
-      setTimeout(function() { btn.textContent = '📋 コピーする'; }, 2000);
+    // パターンCのプランB追記
+    if (pattern === 'C') {
+      // ストレステスト：異常安値が損益分岐点を下回るか
+      if (rivalLow < breakeven) {
+        var vd2   = document.getElementById('cVerdict');
+        var icon2 = document.getElementById('cVIcon');
+        var lbl2  = document.getElementById('cVLabel');
+        var rsn2  = document.getElementById('cVReason');
+        vd2.className = 'verdict2 warn';
+        icon2.textContent = '⚠️';
+        lbl2.textContent  = '要検討（異常安値リスク）';
+        rsn2.textContent  = '異常安値（' + rivalLow.toLocaleString('ja-JP') + '円）が損益分岐点（' + breakeven.toLocaleString('ja-JP') + '円）を下回っています。赤字リスクあり。';
+      }
+
+      // プランB（損益分岐点までの撤退戦）
+      var planBStart  = targetPrice - dailyDown; // スケジュール最終価格の次から
+      var planBDown   = round100((targetPrice - breakeven) / 6);
+      if (planBDown < 100) planBDown = 100;
+      if (planBDown > 300) planBDown = 300;
+
+      var planBLines = [];
+      var planBCur   = targetPrice;
+      var planBDay   = 0;
+      var planBMaxDays = 365;
+      // 最終スケジュール行の日数を取得
+      var lastDay = (b2.match(/最終(\d+)日後/) || ['', '0'])[1];
+      planBDay = parseInt(lastDay) || 0;
+
+      b2 += '\n\n▼【プランB】異常安値に相場が引っ張られ、売れなかった場合の撤退戦▼\n' +
+        '※最悪想定として、損益分岐点に向けてさらに値下げを継続します。';
+
+      while (planBCur > breakeven && planBDay < planBMaxDays) {
+        planBDay++;
+        var planBNext = planBCur - planBDown;
+        if (planBNext <= breakeven) {
+          b2 += '\n最終' + planBDay + '日後に' + breakeven.toLocaleString('ja-JP') + '円（※これ以上は赤字確定のため再出品）';
+          break;
+        }
+        b2 += '\n〇+' + planBDay + '日後に' + planBNext.toLocaleString('ja-JP') + '円';
+        planBCur = planBNext;
+      }
     }
+
+    document.getElementById('block2Text').textContent = b2;
+    document.getElementById('block2Area').style.display = 'block';
+
+    // ── ブロック3：管理番号 ──
+    var mmdd = getTodayMMDD();
+    var b3 = prefix + '-' + mmdd + '-' +
+      toK(startPrice) + '-' +
+      toK(sellPrice)  + '-' +
+      toK(low)        + '-' +
+      toK(breakeven);
+
+    document.getElementById('block3Text').textContent = b3;
+    document.getElementById('block3Area').style.display = 'block';
   }
 
   function resetCalc2() {
-    ['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom','cSoldCount','cListCount','cSoldDays'].forEach(function(id){
+    ['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom',
+     'cSoldCount','cListCount','cSoldDays','cRivalLow','cPrefix'].forEach(function(id){
       var el = document.getElementById(id); if(el) el.value = '';
     });
     document.getElementById('cSource').value    = 'store';
-    document.getElementById('cBuyShip') && (document.getElementById('cBuyShip').value = '');
     document.getElementById('onlineShippingRow').style.display = 'none';
     document.getElementById('cFeeSelect').value  = '10';
     document.getElementById('cSellShip').value   = '0';
@@ -1097,7 +1256,9 @@
     document.getElementById('outsourceCustomRow').style.display = 'none';
     document.getElementById('calcResult').style.display = 'none';
     document.getElementById('scoreArea').style.display  = 'none';
-    document.getElementById('copyArea').style.display   = 'none';
+    document.getElementById('block1Area').style.display = 'none';
+    document.getElementById('block2Area').style.display = 'none';
+    document.getElementById('block3Area').style.display = 'none';
     document.getElementById('cSellPreview').textContent = '— 円';
     document.querySelector('#calcModal .calc-body').scrollTo({ top: 0, behavior: 'smooth' });
   }
