@@ -907,9 +907,9 @@
     return mm + dd;
   }
 
-  // 金額を1000で割って小数第1位
+  // 金額を1000で割って切り上げ整数（メルカリShops SKU用：小数点不可）
   function toK(n) {
-    return (Math.round(n / 100) / 10).toFixed(1).replace(/\.0$/, '');
+    return Math.ceil(n / 1000);
   }
 
   function runCalc() {
@@ -1141,6 +1141,24 @@
         // 既存判定を維持しつつ注記追加
         reason.textContent += '　※ライバル追従後利益:' + (effectiveProfit >= 0 ? '+' : '') + effectiveProfit.toLocaleString('ja-JP') + '円';
       }
+
+      // ── メインパネル上書き（パターンBの実効価格・利益に差し替え）──
+      // ※ rWorst/rNet（最悪想定利益・予想収支）は runCalc() 側で独立計算済みのため一切変更しない
+      var bDisplayFee = Math.floor(targetPrice * feeRate / 100);
+      document.getElementById('rSP').textContent  = fmt(targetPrice);
+      document.getElementById('rFF').textContent  = '- ' + fmt(bDisplayFee) + '（' + feeRate + '%）';
+      var bPrEl = document.getElementById('rPR');
+      bPrEl.textContent = (effectiveProfit >= 0 ? '+' : '') + fmt(effectiveProfit);
+      bPrEl.className   = 'bv ' + (effectiveProfit >= 0 ? 'pos' : 'neg');
+      document.getElementById('rROI').textContent = effectiveROI.toFixed(1) + '%';
+      document.getElementById('rROI').className   = 'bv ' + (effectiveROI >= 0 ? 'pos' : 'neg');
+      // ROIバーも更新
+      var bPct = Math.min(Math.max(effectiveROI, 0), 60);
+      var bBarColor = effectiveROI >= 30 ? '#10b981' : effectiveROI >= 20 ? '#f59e0b' : '#ef4444';
+      document.getElementById('rRL').textContent = effectiveROI.toFixed(1) + '%';
+      var bBar = document.getElementById('rRB');
+      bBar.style.width = '0%'; bBar.style.background = bBarColor;
+      setTimeout(function(){ bBar.style.width = (bPct / 60 * 100) + '%'; }, 50);
     }
 
     // ── ブロック1：相場分析と戦略 ──
@@ -1170,17 +1188,13 @@
     document.getElementById('block1Area').style.display = 'block';
 
     // ── ブロック2：値下げスケジュール ──
-    var totalDown = startPrice - targetPrice;
-    var dailyDown;
-    if (totalDown <= 0) {
-      dailyDown = 100;
-    } else {
-      dailyDown = round100(totalDown / 6);
-      if (dailyDown < 100) dailyDown = 100;
-      if (dailyDown > 300) dailyDown = 300;
-    }
+    // スタート価格の末尾を80円に補正（例：23900→23880、16500→16480）
+    var startPrice80 = Math.floor((startPrice - 80) / 100) * 100 + 80;
+    if (startPrice80 > startPrice) startPrice80 -= 100;
 
-    var b2 = buildSchedule(startPrice, targetPrice, dailyDown);
+    var dailyDown = 300; // 固定300円値下げ
+
+    var b2 = buildSchedule(startPrice80, targetPrice, dailyDown);
 
     // パターンCのプランB追記
     if (pattern === 'C') {
@@ -1196,11 +1210,9 @@
         rsn2.textContent  = '異常安値（' + rivalLow.toLocaleString('ja-JP') + '円）が損益分岐点（' + breakeven.toLocaleString('ja-JP') + '円）を下回っています。赤字リスクあり。';
       }
 
-      // プランB（損益分岐点までの撤退戦）
+      // プランB（損益分岐点までの撤退戦）固定300円
       var planBStart  = targetPrice - dailyDown; // スケジュール最終価格の次から
-      var planBDown   = round100((targetPrice - breakeven) / 6);
-      if (planBDown < 100) planBDown = 100;
-      if (planBDown > 300) planBDown = 300;
+      var planBDown   = 300;
 
       var planBLines = [];
       var planBCur   = targetPrice;
