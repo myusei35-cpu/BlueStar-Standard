@@ -339,6 +339,7 @@
       }
 
       if (matches.length > 0) {
+        suggestionBox.innerHTML = ''; // デバウンス後の確実なクリア
         matches.forEach(brandName => {
           const div = document.createElement('div');
           div.className = 'suggestion-item';
@@ -851,6 +852,21 @@
   function fmt(n) { return n.toLocaleString('ja-JP') + '円'; }
   function stars(n) { return '⭐'.repeat(Math.max(0, Math.min(5, n))); }
 
+  // ROIバーアニメーション用タイマーID（重複防止）
+  var _roiBarTimer = null;
+  function setRoiBar(roi) {
+    var pct      = Math.min(Math.max(roi, 0), 60);
+    var barColor = roi >= 30 ? '#10b981' : roi >= 20 ? '#f59e0b' : '#ef4444';
+    document.getElementById('rRL').textContent = roi.toFixed(1) + '%';
+    var bar = document.getElementById('rRB');
+    bar.style.width = '0%'; bar.style.background = barColor;
+    if (_roiBarTimer !== null) { clearTimeout(_roiBarTimer); _roiBarTimer = null; }
+    _roiBarTimer = setTimeout(function() {
+      bar.style.width = (pct / 60 * 100) + '%';
+      _roiBarTimer = null;
+    }, 50);
+  }
+
   function updateSellPreview() {
     var h = parseFloat(document.getElementById('cHigh').value) || 0;
     var l = parseFloat(document.getElementById('cLow').value)  || 0;
@@ -965,12 +981,7 @@
     prEl.className = 'bv ' + (profit >= 0 ? 'pos' : 'neg');
     document.getElementById('rROI').textContent = roi.toFixed(1) + '%';
     document.getElementById('rROI').className   = 'bv ' + (roi >= 0 ? 'pos' : 'neg');
-    var pct = Math.min(Math.max(roi, 0), 60);
-    var barColor = roi >= 30 ? '#10b981' : roi >= 20 ? '#f59e0b' : '#ef4444';
-    document.getElementById('rRL').textContent = roi.toFixed(1) + '%';
-    var bar = document.getElementById('rRB');
-    bar.style.width = '0%'; bar.style.background = barColor;
-    setTimeout(function(){ bar.style.width = (pct / 60 * 100) + '%'; }, 50);
+    setRoiBar(roi);
     document.getElementById('rWorst').textContent = (worstProfit >= 0 ? '+' : '') + fmt(worstProfit);
     document.getElementById('rWorst').className  = 'bv ' + (worstProfit >= 0 ? 'pos' : 'neg');
     document.getElementById('rNet').textContent  = fmt(income);
@@ -1156,12 +1167,7 @@
       bPrEl.className   = 'bv ' + (effectiveProfit >= 0 ? 'pos' : 'neg');
       document.getElementById('rROI').textContent = effectiveROI.toFixed(1) + '%';
       document.getElementById('rROI').className   = 'bv ' + (effectiveROI >= 0 ? 'pos' : 'neg');
-      var bPct = Math.min(Math.max(effectiveROI, 0), 60);
-      var bBarColor = effectiveROI >= 30 ? '#10b981' : effectiveROI >= 20 ? '#f59e0b' : '#ef4444';
-      document.getElementById('rRL').textContent = effectiveROI.toFixed(1) + '%';
-      var bBar = document.getElementById('rRB');
-      bBar.style.width = '0%'; bBar.style.background = bBarColor;
-      setTimeout(function(){ bBar.style.width = (bPct / 60 * 100) + '%'; }, 50);
+      setRoiBar(effectiveROI);
     }
 
     // ── メインパネル上書き（パターンC：スタート価格 = high）──
@@ -1179,12 +1185,7 @@
       cPrEl.className   = 'bv ' + (cProfit >= 0 ? 'pos' : 'neg');
       document.getElementById('rROI').textContent = cROI.toFixed(1) + '%';
       document.getElementById('rROI').className   = 'bv ' + (cROI >= 0 ? 'pos' : 'neg');
-      var cPct = Math.min(Math.max(cROI, 0), 60);
-      var cBarColor = cROI >= 30 ? '#10b981' : cROI >= 20 ? '#f59e0b' : '#ef4444';
-      document.getElementById('rRL').textContent = cROI.toFixed(1) + '%';
-      var cBar = document.getElementById('rRB');
-      cBar.style.width = '0%'; cBar.style.background = cBarColor;
-      setTimeout(function(){ cBar.style.width = (cPct / 60 * 100) + '%'; }, 50);
+      setRoiBar(cROI);
     }
 
     // ── ブロック1：相場分析と戦略 ──
@@ -1240,7 +1241,6 @@
       var planBStart  = targetPrice - dailyDown; // スケジュール最終価格の次から
       var planBDown   = 300;
 
-      var planBLines = [];
       var planBCur   = targetPrice;
       var planBDay   = 0;
       var planBMaxDays = 365;
