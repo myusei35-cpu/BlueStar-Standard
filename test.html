@@ -1142,23 +1142,49 @@
         reason.textContent += '　※ライバル追従後利益:' + (effectiveProfit >= 0 ? '+' : '') + effectiveProfit.toLocaleString('ja-JP') + '円';
       }
 
-      // ── メインパネル上書き（パターンBの実効価格・利益に差し替え）──
+      // ── メインパネル上書き（パターンB：スタート価格 = rivalLow）──
       // ※ rWorst/rNet（最悪想定利益・予想収支）は runCalc() 側で独立計算済みのため一切変更しない
-      var bDisplayFee = Math.floor(targetPrice * feeRate / 100);
-      document.getElementById('rSP').textContent  = fmt(targetPrice);
+      // startPrice = rivalLow（戦略テキストの「〜円からスタート」と同じ変数）
+      var bDisplayFee = Math.floor(startPrice * feeRate / 100);
+      var bIncome2    = startPrice - bDisplayFee - ship - outs;
+      effectiveProfit = bIncome2 - totalCost;
+      effectiveROI    = totalCost > 0 ? (effectiveProfit / totalCost * 100) : 0;
+      document.getElementById('rSP').textContent  = fmt(startPrice);
       document.getElementById('rFF').textContent  = '- ' + fmt(bDisplayFee) + '（' + feeRate + '%）';
       var bPrEl = document.getElementById('rPR');
       bPrEl.textContent = (effectiveProfit >= 0 ? '+' : '') + fmt(effectiveProfit);
       bPrEl.className   = 'bv ' + (effectiveProfit >= 0 ? 'pos' : 'neg');
       document.getElementById('rROI').textContent = effectiveROI.toFixed(1) + '%';
       document.getElementById('rROI').className   = 'bv ' + (effectiveROI >= 0 ? 'pos' : 'neg');
-      // ROIバーも更新
       var bPct = Math.min(Math.max(effectiveROI, 0), 60);
       var bBarColor = effectiveROI >= 30 ? '#10b981' : effectiveROI >= 20 ? '#f59e0b' : '#ef4444';
       document.getElementById('rRL').textContent = effectiveROI.toFixed(1) + '%';
       var bBar = document.getElementById('rRB');
       bBar.style.width = '0%'; bBar.style.background = bBarColor;
       setTimeout(function(){ bBar.style.width = (bPct / 60 * 100) + '%'; }, 50);
+    }
+
+    // ── メインパネル上書き（パターンC：スタート価格 = high）──
+    // ※ rWorst/rNet は runCalc() 側で独立計算済みのため一切変更しない
+    if (pattern === 'C') {
+      // startPrice = high（戦略テキストの「強気の〜円からスタート」と同じ変数）
+      var cDisplayFee = Math.floor(startPrice * feeRate / 100);
+      var cIncome     = startPrice - cDisplayFee - ship - outs;
+      var cProfit     = cIncome - totalCost;
+      var cROI        = totalCost > 0 ? (cProfit / totalCost * 100) : 0;
+      document.getElementById('rSP').textContent  = fmt(startPrice);
+      document.getElementById('rFF').textContent  = '- ' + fmt(cDisplayFee) + '（' + feeRate + '%）';
+      var cPrEl = document.getElementById('rPR');
+      cPrEl.textContent = (cProfit >= 0 ? '+' : '') + fmt(cProfit);
+      cPrEl.className   = 'bv ' + (cProfit >= 0 ? 'pos' : 'neg');
+      document.getElementById('rROI').textContent = cROI.toFixed(1) + '%';
+      document.getElementById('rROI').className   = 'bv ' + (cROI >= 0 ? 'pos' : 'neg');
+      var cPct = Math.min(Math.max(cROI, 0), 60);
+      var cBarColor = cROI >= 30 ? '#10b981' : cROI >= 20 ? '#f59e0b' : '#ef4444';
+      document.getElementById('rRL').textContent = cROI.toFixed(1) + '%';
+      var cBar = document.getElementById('rRB');
+      cBar.style.width = '0%'; cBar.style.background = cBarColor;
+      setTimeout(function(){ cBar.style.width = (cPct / 60 * 100) + '%'; }, 50);
     }
 
     // ── ブロック1：相場分析と戦略 ──
