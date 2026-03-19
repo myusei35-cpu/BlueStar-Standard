@@ -129,9 +129,10 @@
       box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); cursor: pointer;
     }
     .btn-lens {
-      flex: 1; background-color: #dc2626; color: #fff; border: none; 
+      display: none; width: 100%; background-color: #dc2626; color: #fff; border: none; 
       border-radius: 12px; padding: 14px 0; font-weight: bold; font-size: 1.05em;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer; display: none;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer;
+      margin-top: 10px; box-sizing: border-box;
     }
 
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
@@ -180,8 +181,8 @@
       <div class="button-row">
         <button class="btn-generate" onclick="generateLinks()">生成</button>
         <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
-        <button id="lensSubmitBtn" class="btn-lens" onclick="finalLensSubmit()">レンズへ転送</button>
       </div>
+      <button id="lensSubmitBtn" class="btn-lens" onclick="finalLensSubmit()">🔍 レンズへ転送</button>
 
       <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
     </div>
@@ -1309,11 +1310,14 @@
     #silentCamModal {
       display: none;
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.92);
+      background: rgba(0,0,0,0.95);
       z-index: 4000;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
+      padding: 16px;
+      box-sizing: border-box;
+      overflow-y: auto;
     }
     #silentCamModal.active { display: flex; }
     #silentCamVideo {
@@ -1321,27 +1325,47 @@
       border-radius: 12px;
       background: #000;
       display: block;
+      margin-top: 8px;
     }
+    /* カメラ番号ラベル */
+    #scamCamLabel {
+      color: #64748b; font-size: 0.78em;
+      margin-top: 6px; margin-bottom: 2px;
+      width: 100%; max-width: 480px;
+      text-align: right;
+    }
+    /* ボタン行：シャッター・切替・閉じる を均等3分割 */
     .scam-btns {
-      display: flex; gap: 12px; margin-top: 16px; width: 100%; max-width: 480px;
+      display: flex; gap: 10px;
+      margin-top: 10px;
+      width: 100%; max-width: 480px;
     }
     .scam-btn-shutter {
       flex: 2; background: #2563eb; color: #fff; border: none;
-      border-radius: 12px; padding: 15px 0; font-size: 1.1em; font-weight: 800;
+      border-radius: 12px; padding: 14px 0; font-size: 1em; font-weight: 800;
       box-shadow: 0 4px 12px rgba(37,99,235,0.4); cursor: pointer;
     }
-    .scam-btn-close {
-      flex: 1; background: #334155; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px; padding: 15px 0; font-size: 1em; font-weight: 700; cursor: pointer;
+    .scam-btn-switch {
+      flex: 1; background: #0e7490; color: #fff; border: none;
+      border-radius: 12px; padding: 14px 0; font-size: 0.9em; font-weight: 700;
+      cursor: pointer;
     }
+    .scam-btn-close {
+      flex: 1; background: #334155; color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 14px 0; font-size: 0.9em; font-weight: 700; cursor: pointer;
+    }
+    /* 撮影プレビュー */
     #silentCamPreviewWrap {
       margin-top: 12px; width: 100%; max-width: 480px; display: none;
     }
     #silentCamPreview {
       width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
     }
+    /* Lensへ転送ボタン */
     #scamSendLens {
-      display: none; width: 100%; max-width: 480px; margin-top: 10px;
+      display: none;
+      width: 100%; max-width: 480px; margin-top: 10px;
       background: #dc2626; color: #fff; border: none;
       border-radius: 12px; padding: 13px 0; font-size: 1em; font-weight: 800; cursor: pointer;
       box-shadow: 0 4px 12px rgba(220,38,38,0.35);
@@ -1350,8 +1374,10 @@
 
   <div id="silentCamModal">
     <video id="silentCamVideo" autoplay muted playsinline></video>
+    <div id="scamCamLabel"></div>
     <div class="scam-btns">
       <button class="scam-btn-shutter" onclick="silentCamShutter()">📷 シャッター（無音）</button>
+      <button class="scam-btn-switch"  onclick="switchSilentCam()">🔄 カメラ切替</button>
       <button class="scam-btn-close"   onclick="closeSilentCam()">✕ 閉じる</button>
     </div>
     <div id="silentCamPreviewWrap">
@@ -1362,36 +1388,112 @@
 
   <script>
   // ── 無音カメラ（WebRTC） ──
-  // 将来のLens API連携用：撮影画像をグローバルに保持
-  window.capturedImageDataURL = null;
+  window.capturedImageDataURL = null; // 将来のLens API連携用グローバル保持
 
-  var _silentStream = null; // カメラストリーム（解放管理用）
+  var _silentStream   = null;  // 現在のストリーム
+  var _backCamDevices = [];    // 背面カメラデバイスリスト
+  var _camIndex       = 0;     // 現在のカメラインデックス
+  var LS_CAM_KEY      = 'bluestar_cam_deviceId';
+
+  // 背面カメラ一覧を取得（getUserMedia許可後に呼ぶ）
+  function _enumBackCams() {
+    return navigator.mediaDevices.enumerateDevices().then(function(devices) {
+      _backCamDevices = devices.filter(function(d) {
+        return d.kind === 'videoinput' && d.deviceId;
+      });
+      // 保存済みdeviceIdのインデックスを復元
+      var saved = localStorage.getItem(LS_CAM_KEY);
+      if (saved) {
+        var idx = _backCamDevices.findIndex(function(d) { return d.deviceId === saved; });
+        if (idx !== -1) _camIndex = idx;
+      }
+      return _backCamDevices;
+    });
+  }
+
+  // 指定インデックスのカメラを起動（既存ストリームは事前に停止済み前提）
+  function _startCam(idx) {
+    var video      = document.getElementById('silentCamVideo');
+    var savedId    = (idx !== undefined && _backCamDevices[idx])
+                     ? _backCamDevices[idx].deviceId : null;
+    var lsId       = localStorage.getItem(LS_CAM_KEY);
+    var useId      = savedId || lsId || null;
+
+    // ⚠️ facingModeとdeviceId:exactの混在禁止
+    var videoConstraint;
+    if (useId) {
+      videoConstraint = {
+        deviceId: { exact: useId },
+        width: { ideal: 1920 }, height: { ideal: 1080 }
+      };
+    } else {
+      videoConstraint = {
+        facingMode: 'environment',
+        width: { ideal: 1920 }, height: { ideal: 1080 }
+      };
+    }
+
+    return navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false })
+      .then(function(stream) {
+        _silentStream = stream;
+        video.srcObject = stream;
+        _updateCamLabel();
+      });
+  }
+
+  // カメラ表示ラベル更新
+  function _updateCamLabel() {
+    var el = document.getElementById('scamCamLabel');
+    if (!el) return;
+    var total = _backCamDevices.length;
+    el.textContent = total > 1 ? 'カメラ ' + (_camIndex + 1) + '/' + total : '';
+  }
 
   function openSilentCam() {
     var modal = document.getElementById('silentCamModal');
-    var video = document.getElementById('silentCamVideo');
-    // プレビューリセット
     document.getElementById('silentCamPreviewWrap').style.display = 'none';
     document.getElementById('scamSendLens').style.display = 'none';
 
-    navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }, // アウトカメラ強制
-      audio: false
-    })
-    .then(function(stream) {
-      _silentStream = stream;
-      video.srcObject = stream;
-      modal.classList.add('active');
-    })
-    .catch(function(err) {
-      alert('カメラを起動できませんでした。\n許可設定を確認してください。\n（' + err.message + '）');
+    var lsId = localStorage.getItem(LS_CAM_KEY);
+    var initConstraint = lsId
+      ? { video: { deviceId: { exact: lsId }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }
+      : { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false };
+
+    navigator.mediaDevices.getUserMedia(initConstraint)
+      .then(function(stream) {
+        _silentStream = stream;
+        document.getElementById('silentCamVideo').srcObject = stream;
+        modal.classList.add('active');
+        // 許可取得後にデバイス一覧を取得
+        return _enumBackCams();
+      })
+      .then(function() { _updateCamLabel(); })
+      .catch(function(err) {
+        alert('カメラを起動できませんでした。\n許可設定を確認してください。\n（' + err.message + '）');
+      });
+  }
+
+  function switchSilentCam() {
+    if (_backCamDevices.length <= 1) return;
+    // 現在のストリームを停止
+    if (_silentStream) {
+      _silentStream.getTracks().forEach(function(t) { t.stop(); });
+      _silentStream = null;
+    }
+    // インデックスをループ
+    _camIndex = (_camIndex + 1) % _backCamDevices.length;
+    var newId = _backCamDevices[_camIndex].deviceId;
+    // localStorage に記憶
+    try { localStorage.setItem(LS_CAM_KEY, newId); } catch(e) {}
+
+    _startCam(_camIndex).catch(function(err) {
+      alert('カメラ切替に失敗しました。\n（' + err.message + '）');
     });
   }
 
   function closeSilentCam() {
-    // カメラハードウェアを完全停止・メモリ解放
     if (_silentStream) {
-      _silentStream.getTracks().forEach(function(track) { track.stop(); });
+      _silentStream.getTracks().forEach(function(t) { t.stop(); });
       _silentStream = null;
     }
     var video = document.getElementById('silentCamVideo');
@@ -1401,36 +1503,29 @@
 
   function silentCamShutter() {
     var video = document.getElementById('silentCamVideo');
-    var vw = video.videoWidth;
-    var vh = video.videoHeight;
+    var vw = video.videoWidth, vh = video.videoHeight;
     if (!vw || !vh) { alert('カメラ映像の取得に失敗しました。'); return; }
 
-    // 最大800pxにリサイズ（アスペクト比維持）
-    var MAX = 800;
+    // 元解像度を維持（縮小しない）・アスペクト比維持
+    var MAX = 1920;
     var w = vw, h = vh;
     if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
 
     var canvas = document.createElement('canvas');
-    canvas.width  = w;
-    canvas.height = h;
+    canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+    var dataURL = canvas.toDataURL('image/jpeg', 0.92);
+    canvas.width = 0; canvas.height = 0; // Canvasメモリ解放
 
-    var dataURL = canvas.toDataURL('image/jpeg', 0.85);
-
-    // Canvasをメモリから解放
-    canvas.width = 0; canvas.height = 0;
-
-    // カメラを即停止
+    // カメラ即停止
     if (_silentStream) {
-      _silentStream.getTracks().forEach(function(track) { track.stop(); });
+      _silentStream.getTracks().forEach(function(t) { t.stop(); });
       _silentStream = null;
     }
     video.srcObject = null;
 
-    // グローバル保持（将来のLens API連携用）
     window.capturedImageDataURL = dataURL;
 
-    // プレビュー表示
     var preview = document.getElementById('silentCamPreview');
     preview.src = dataURL;
     document.getElementById('silentCamPreviewWrap').style.display = 'block';
@@ -1439,18 +1534,15 @@
 
   function silentCamSendLens() {
     if (!window.capturedImageDataURL) return;
-    var keyword = document.getElementById('keyword').value.trim();
+    var keyword  = document.getElementById('keyword').value.trim();
     var searchKw = keyword ? keyword + ' メルカリ' : 'メルカリ';
 
-    // DataURL → Blob → File に変換してLensへ転送
     var arr   = window.capturedImageDataURL.split(',');
     var mime  = arr[0].match(/:(.*?);/)[1];
     var bstr  = atob(arr[1]);
-    var n     = bstr.length;
-    var u8arr = new Uint8Array(n);
-    for (var i = 0; i < n; i++) { u8arr[i] = bstr.charCodeAt(i); }
-    var blob = new Blob([u8arr], { type: mime });
-    var file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+    var u8arr = new Uint8Array(bstr.length);
+    for (var i = 0; i < bstr.length; i++) { u8arr[i] = bstr.charCodeAt(i); }
+    var file = new File([new Blob([u8arr], { type: mime })], 'image.jpg', { type: 'image/jpeg' });
 
     var newWin = window.open('', '_blank');
     if (!newWin) { alert('ポップアップを許可してください'); return; }
