@@ -1396,24 +1396,38 @@
   var LS_CAM_KEY      = 'bluestar_cam_deviceId';
 
   // 背面カメラ一覧を取得（getUserMedia許可後に呼ぶ）
+  // 各deviceIdで実際にgetUserMediaし、facingMode=environmentのものだけ残す
   function _enumBackCams() {
     return navigator.mediaDevices.enumerateDevices().then(function(devices) {
       var allVideo = devices.filter(function(d) { return d.kind === 'videoinput' && d.deviceId; });
 
-      // 前面カメラをラベルで除外（front / user / 前面 / インカメ 等）
-      var frontPattern = /front|user|前面|インカメ|selfie/i;
-      var backOnly = allVideo.filter(function(d) { return !frontPattern.test(d.label); });
+      // 各カメラを順番に試してfacingMode確認
+      var checks = allVideo.map(function(d) {
+        return navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: d.deviceId } }, audio: false
+        }).then(function(s) {
+          var settings = s.getVideoTracks()[0].getSettings();
+          s.getTracks().forEach(function(t) { t.stop(); }); // 即解放
+          // facingModeがenvironmentのもの、または不明（空）のものを背面候補とする
+          if (!settings.facingMode || settings.facingMode === 'environment') {
+            return d;
+          }
+          return null;
+        }).catch(function() { return null; });
+      });
 
-      // 背面が1台も絞り込めなかった場合は全台をフォールバック
-      _backCamDevices = backOnly.length > 0 ? backOnly : allVideo;
+      return Promise.all(checks).then(function(results) {
+        var backOnly = results.filter(function(d) { return d !== null; });
+        _backCamDevices = backOnly.length > 0 ? backOnly : allVideo;
 
-      // 保存済みdeviceIdのインデックスを復元
-      var saved = localStorage.getItem(LS_CAM_KEY);
-      if (saved) {
-        var idx = _backCamDevices.findIndex(function(d) { return d.deviceId === saved; });
-        if (idx !== -1) _camIndex = idx;
-      }
-      return _backCamDevices;
+        // 保存済みdeviceIdのインデックスを復元
+        var saved = localStorage.getItem(LS_CAM_KEY);
+        if (saved) {
+          var idx = _backCamDevices.findIndex(function(d) { return d.deviceId === saved; });
+          if (idx !== -1) _camIndex = idx;
+        }
+        return _backCamDevices;
+      });
     });
   }
 
