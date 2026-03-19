@@ -272,11 +272,15 @@
 
       let html = '';
       sites.forEach(site => {
-        const quettaUrl = 'quetta://open?url=' + encodeURIComponent(site.url);
-        const onclick = site.quetta
-          ? `location.href='${quettaUrl}'`
-          : `openFinalURL('${site.url}')`;
-        html += `
+        let btn;
+        if (site.quetta) {
+          const quettaUrl = 'quetta://open?url=' + encodeURIComponent(site.url);
+          btn = `<a href="${quettaUrl}" style="text-decoration:none;">
+                   <button class="open-btn">開く ➔</button>
+                 </a>`;
+        } else {
+          btn = `<button class="open-btn" onclick="openFinalURL('${site.url}')">開く ➔</button>`;
+        }        html += `
           <div class="site-card">
             <div class="logo-container" style="background-color: #fff;">
               <img src="${site.img}" style="width: 100%; height: 100%; object-fit: contain; padding: 4px; box-sizing: border-box; border-radius: 8px;">
@@ -285,7 +289,7 @@
               <div class="title">${site.name}</div>
               <div class="desc">${site.desc}</div>
             </div>
-            <button class="open-btn" onclick="${onclick}">開く ➔</button>
+            ${btn}
           </div>
         `;
       });
