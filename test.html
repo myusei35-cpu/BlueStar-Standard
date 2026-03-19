@@ -1377,7 +1377,6 @@
     <div id="scamCamLabel"></div>
     <div class="scam-btns">
       <button class="scam-btn-shutter" onclick="silentCamShutter()">📷 シャッター（無音）</button>
-      <button class="scam-btn-switch"  onclick="switchSilentCam()">🔄 カメラ切替</button>
       <button class="scam-btn-close"   onclick="closeSilentCam()">✕ 閉じる</button>
     </div>
     <div id="silentCamPreviewWrap">
@@ -1389,110 +1388,26 @@
   <script>
   // ── 無音カメラ（WebRTC） ──
   window.capturedImageDataURL = null; // 将来のLens API連携用グローバル保持
+  var _silentStream = null;
 
-  var _silentStream   = null;  // 現在のストリーム
-  var _backCamDevices = [];    // 背面カメラデバイスリスト
-  var _camIndex       = 0;     // 現在のカメラインデックス
-  var LS_CAM_KEY      = 'bluestar_cam_deviceId';
-
-  // カメラ一覧を取得（getUserMedia許可後に呼ぶ）
-  function _enumBackCams() {
-    return navigator.mediaDevices.enumerateDevices().then(function(devices) {
-      _backCamDevices = devices.filter(function(d) { return d.kind === 'videoinput' && d.deviceId; });
-
-      // 現在起動中のストリームのdeviceIdでインデックスを確定
-      if (_silentStream && _silentStream.getVideoTracks().length > 0) {
-        var currentId = _silentStream.getVideoTracks()[0].getSettings().deviceId;
-        var idx = _backCamDevices.findIndex(function(d) { return d.deviceId === currentId; });
-        if (idx !== -1) _camIndex = idx;
-      } else {
-        var saved = localStorage.getItem(LS_CAM_KEY);
-        if (saved) {
-          var sidx = _backCamDevices.findIndex(function(d) { return d.deviceId === saved; });
-          if (sidx !== -1) _camIndex = sidx;
-        }
-      }
-      return _backCamDevices;
-    });
-  }
-
-  // 指定インデックスのカメラを起動（既存ストリームは事前に停止済み前提）
-  function _startCam(idx) {
-    var video      = document.getElementById('silentCamVideo');
-    var savedId    = (idx !== undefined && _backCamDevices[idx])
-                     ? _backCamDevices[idx].deviceId : null;
-    var lsId       = localStorage.getItem(LS_CAM_KEY);
-    var useId      = savedId || lsId || null;
-
-    // ⚠️ facingModeとdeviceId:exactの混在禁止
-    var videoConstraint;
-    if (useId) {
-      videoConstraint = {
-        deviceId: { exact: useId },
-        width: { ideal: 1920 }, height: { ideal: 1080 }
-      };
-    } else {
-      videoConstraint = {
-        facingMode: 'environment',
-        width: { ideal: 1920 }, height: { ideal: 1080 }
-      };
-    }
-
-    return navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false })
-      .then(function(stream) {
-        _silentStream = stream;
-        video.srcObject = stream;
-        _updateCamLabel();
-      });
-  }
-
-  // カメラ表示ラベル更新
-  function _updateCamLabel() {
-    var el = document.getElementById('scamCamLabel');
-    if (!el) return;
-    var total = _backCamDevices.length;
-    el.textContent = total > 1 ? 'カメラ ' + (_camIndex + 1) + '/' + total : '';
-  }
-
+  // カメラ起動（常にアウトカメラ固定）
   function openSilentCam() {
     var modal = document.getElementById('silentCamModal');
     document.getElementById('silentCamPreviewWrap').style.display = 'none';
     document.getElementById('scamSendLens').style.display = 'none';
+    document.getElementById('scamCamLabel').textContent = '';
 
-    var lsId = localStorage.getItem(LS_CAM_KEY);
-    var initConstraint = lsId
-      ? { video: { deviceId: { exact: lsId }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }
-      : { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false };
-
-    navigator.mediaDevices.getUserMedia(initConstraint)
-      .then(function(stream) {
-        _silentStream = stream;
-        document.getElementById('silentCamVideo').srcObject = stream;
-        modal.classList.add('active');
-        // 許可取得後にデバイス一覧を取得
-        return _enumBackCams();
-      })
-      .then(function() { _updateCamLabel(); })
-      .catch(function(err) {
-        alert('カメラを起動できませんでした。\n許可設定を確認してください。\n（' + err.message + '）');
-      });
-  }
-
-  function switchSilentCam() {
-    if (_backCamDevices.length <= 1) return;
-    // 現在のストリームを停止
-    if (_silentStream) {
-      _silentStream.getTracks().forEach(function(t) { t.stop(); });
-      _silentStream = null;
-    }
-    // インデックスをループ
-    _camIndex = (_camIndex + 1) % _backCamDevices.length;
-    var newId = _backCamDevices[_camIndex].deviceId;
-    // localStorage に記憶
-    try { localStorage.setItem(LS_CAM_KEY, newId); } catch(e) {}
-
-    _startCam(_camIndex).catch(function(err) {
-      alert('カメラ切替に失敗しました。\n（' + err.message + '）');
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { exact: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    })
+    .then(function(stream) {
+      _silentStream = stream;
+      document.getElementById('silentCamVideo').srcObject = stream;
+      modal.classList.add('active');
+    })
+    .catch(function(err) {
+      alert('カメラを起動できませんでした。\n許可設定を確認してください。\n（' + err.message + '）');
     });
   }
 
