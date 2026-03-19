@@ -253,11 +253,29 @@
           desc: '相場確認',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
           url: `https://jp.mercari.com/search?keyword=${encKey}&item_condition_id=3&category_id=11%2C12%2C13%2C14%2C15%2C27%2C1488%2C163%2C30%2C31%2C32%2C35&status=sold_out&seller_type=0&item_types=mercari&sort=created_time&order=desc`
+        },
+        {
+          name: 'メルカリ：販売中',
+          desc: '🔵 Quettaで開く（拡張機能用）',
+          img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg',
+          url: `https://jp.mercari.com/search?keyword=${encKey}&item_condition_id=3&category_id=11%2C12%2C13%2C14%2C15%2C27%2C1488%2C163%2C30%2C31%2C32%2C35&status=on_sale&seller_type=0&item_types=mercari&sort=created_time&order=desc`,
+          quetta: true
+        },
+        {
+          name: 'メルカリ：売り切れ',
+          desc: '🔵 Quettaで開く（拡張機能用）',
+          img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg',
+          url: `https://jp.mercari.com/search?keyword=${encKey}&item_condition_id=3&category_id=11%2C12%2C13%2C14%2C15%2C27%2C1488%2C163%2C30%2C31%2C32%2C35&status=sold_out&seller_type=0&item_types=mercari&sort=created_time&order=desc`,
+          quetta: true
         }
       ];
 
       let html = '';
       sites.forEach(site => {
+        const quettaUrl = 'quetta://open?url=' + encodeURIComponent(site.url);
+        const onclick = site.quetta
+          ? `location.href='${quettaUrl}'`
+          : `openFinalURL('${site.url}')`;
         html += `
           <div class="site-card">
             <div class="logo-container" style="background-color: #fff;">
@@ -267,7 +285,7 @@
               <div class="title">${site.name}</div>
               <div class="desc">${site.desc}</div>
             </div>
-            <button class="open-btn" onclick="openFinalURL('${site.url}')">開く ➔</button>
+            <button class="open-btn" onclick="${onclick}">開く ➔</button>
           </div>
         `;
       });
