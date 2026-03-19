@@ -1395,39 +1395,24 @@
   var _camIndex       = 0;     // 現在のカメラインデックス
   var LS_CAM_KEY      = 'bluestar_cam_deviceId';
 
-  // 背面カメラ一覧を取得（getUserMedia許可後に呼ぶ）
-  // 各deviceIdで実際にgetUserMediaし、facingMode=environmentのものだけ残す
+  // カメラ一覧を取得（getUserMedia許可後に呼ぶ）
   function _enumBackCams() {
     return navigator.mediaDevices.enumerateDevices().then(function(devices) {
-      var allVideo = devices.filter(function(d) { return d.kind === 'videoinput' && d.deviceId; });
+      _backCamDevices = devices.filter(function(d) { return d.kind === 'videoinput' && d.deviceId; });
 
-      // 各カメラを順番に試してfacingMode確認
-      var checks = allVideo.map(function(d) {
-        return navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: d.deviceId } }, audio: false
-        }).then(function(s) {
-          var settings = s.getVideoTracks()[0].getSettings();
-          s.getTracks().forEach(function(t) { t.stop(); }); // 即解放
-          // facingModeがenvironmentのもの、または不明（空）のものを背面候補とする
-          if (!settings.facingMode || settings.facingMode === 'environment') {
-            return d;
-          }
-          return null;
-        }).catch(function() { return null; });
-      });
-
-      return Promise.all(checks).then(function(results) {
-        var backOnly = results.filter(function(d) { return d !== null; });
-        _backCamDevices = backOnly.length > 0 ? backOnly : allVideo;
-
-        // 保存済みdeviceIdのインデックスを復元
+      // 現在起動中のストリームのdeviceIdでインデックスを確定
+      if (_silentStream && _silentStream.getVideoTracks().length > 0) {
+        var currentId = _silentStream.getVideoTracks()[0].getSettings().deviceId;
+        var idx = _backCamDevices.findIndex(function(d) { return d.deviceId === currentId; });
+        if (idx !== -1) _camIndex = idx;
+      } else {
         var saved = localStorage.getItem(LS_CAM_KEY);
         if (saved) {
-          var idx = _backCamDevices.findIndex(function(d) { return d.deviceId === saved; });
-          if (idx !== -1) _camIndex = idx;
+          var sidx = _backCamDevices.findIndex(function(d) { return d.deviceId === saved; });
+          if (sidx !== -1) _camIndex = sidx;
         }
-        return _backCamDevices;
-      });
+      }
+      return _backCamDevices;
     });
   }
 
