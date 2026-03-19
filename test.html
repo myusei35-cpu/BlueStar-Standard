@@ -1398,9 +1398,15 @@
   // 背面カメラ一覧を取得（getUserMedia許可後に呼ぶ）
   function _enumBackCams() {
     return navigator.mediaDevices.enumerateDevices().then(function(devices) {
-      _backCamDevices = devices.filter(function(d) {
-        return d.kind === 'videoinput' && d.deviceId;
-      });
+      var allVideo = devices.filter(function(d) { return d.kind === 'videoinput' && d.deviceId; });
+
+      // 前面カメラをラベルで除外（front / user / 前面 / インカメ 等）
+      var frontPattern = /front|user|前面|インカメ|selfie/i;
+      var backOnly = allVideo.filter(function(d) { return !frontPattern.test(d.label); });
+
+      // 背面が1台も絞り込めなかった場合は全台をフォールバック
+      _backCamDevices = backOnly.length > 0 ? backOnly : allVideo;
+
       // 保存済みdeviceIdのインデックスを復元
       var saved = localStorage.getItem(LS_CAM_KEY);
       if (saved) {
