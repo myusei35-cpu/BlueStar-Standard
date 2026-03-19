@@ -129,9 +129,10 @@
       box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); cursor: pointer;
     }
     .btn-lens {
-      flex: 1; background-color: #dc2626; color: #fff; border: none; 
+      display: none; width: 100%; background-color: #dc2626; color: #fff; border: none; 
       border-radius: 12px; padding: 14px 0; font-weight: bold; font-size: 1.05em;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer; display: none;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer;
+      margin-top: 10px; box-sizing: border-box;
     }
 
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: flex-end; z-index: 2000; }
@@ -171,7 +172,7 @@
     <div class="bottom-panel">
       <div class="search-row">
         <div class="input-wrapper">
-          <input id="keyword" type="text" placeholder="🔍 キーワードを入力" autocomplete="off" oninput="toggleClearBtn(this.value)">
+          <input id="keyword" type="text" placeholder="🔍 キーワードを入力 / Gboardカメラでテキストスキャン可" autocomplete="off" oninput="toggleClearBtn(this.value)">
           <span class="clear-btn" id="clearBtn" onclick="document.getElementById('keyword').value=''; this.style.display='none'; document.getElementById('suggestionBox').style.display='none';">❌</span>
           <div id="suggestionBox" class="suggestion-box"></div>
         </div>
@@ -180,8 +181,8 @@
       <div class="button-row">
         <button class="btn-generate" onclick="generateLinks()">生成</button>
         <button class="btn-action-menu" onclick="openActionMenu()">📸 アクション選択</button>
-        <button id="lensSubmitBtn" class="btn-lens" onclick="finalLensSubmit()">レンズへ転送</button>
       </div>
+      <button id="lensSubmitBtn" class="btn-lens" onclick="finalLensSubmit()">🔍 レンズへ転送</button>
 
       <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="showLensSubmit()">
     </div>
@@ -284,7 +285,8 @@
   <div id="actionModal" class="modal-overlay" onclick="closeActionMenu(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #cbd5e1;">アクションを選択してください</h3>
-      <button class="modal-btn camera" onclick="openCamera()">📸 カメラで撮影</button>
+      <button class="modal-btn" style="background-color:#0e7490;" onclick="closeActionMenu(event); openSilentCam();">📷 無音カメラ（WebRTC）</button>
+      <button class="modal-btn camera" onclick="openCamera()">📷 通常カメラ（音あり）</button>
       <button class="modal-btn" onclick="openGallery()">📁 アルバムから選択</button>
       <button class="modal-btn" style="background-color:#2563eb;" onclick="closeActionMenu(event); openCalcModal();">💹 利益計算</button>
       <button class="modal-btn cancel" onclick="closeActionMenu(event)">キャンセル</button>
@@ -1302,6 +1304,202 @@
   }
   </script>
 
+
+  <!-- ======= 無音カメラモーダル（WebRTC） ======= -->
+  <style>
+    #silentCamModal {
+      display: none;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 4000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 16px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    #silentCamModal.active { display: flex; }
+    #silentCamVideo {
+      width: 100%; max-width: 480px;
+      border-radius: 12px;
+      background: #000;
+      display: block;
+      margin-top: 8px;
+    }
+    /* カメラ番号ラベル */
+    #scamCamLabel {
+      color: #64748b; font-size: 0.78em;
+      margin-top: 6px; margin-bottom: 2px;
+      width: 100%; max-width: 480px;
+      text-align: right;
+    }
+    /* ボタン行：シャッター・切替・閉じる を均等3分割 */
+    .scam-btns {
+      display: flex; gap: 10px;
+      margin-top: 10px;
+      width: 100%; max-width: 480px;
+    }
+    .scam-btn-shutter {
+      flex: 2; background: #2563eb; color: #fff; border: none;
+      border-radius: 12px; padding: 14px 0; font-size: 1em; font-weight: 800;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.4); cursor: pointer;
+    }
+    .scam-btn-switch {
+      flex: 1; background: #0e7490; color: #fff; border: none;
+      border-radius: 12px; padding: 14px 0; font-size: 0.9em; font-weight: 700;
+      cursor: pointer;
+    }
+    .scam-btn-close {
+      flex: 1; background: #334155; color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 14px 0; font-size: 0.9em; font-weight: 700; cursor: pointer;
+    }
+    /* 撮影プレビュー */
+    #silentCamPreviewWrap {
+      margin-top: 12px; width: 100%; max-width: 480px; display: none;
+    }
+    #silentCamPreview {
+      width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
+    }
+    /* Lensへ転送ボタン */
+    #scamSendLens {
+      display: none;
+      width: 100%; max-width: 480px; margin-top: 10px;
+      background: #dc2626; color: #fff; border: none;
+      border-radius: 12px; padding: 13px 0; font-size: 1em; font-weight: 800; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(220,38,38,0.35);
+    }
+  </style>
+
+  <div id="silentCamModal">
+    <video id="silentCamVideo" autoplay muted playsinline></video>
+    <div id="scamCamLabel"></div>
+    <div class="scam-btns">
+      <button class="scam-btn-shutter" onclick="silentCamShutter()">📷 シャッター（無音）</button>
+      <button class="scam-btn-close"   onclick="closeSilentCam()">✕ 閉じる</button>
+    </div>
+    <div id="silentCamPreviewWrap">
+      <img id="silentCamPreview" alt="撮影プレビュー">
+    </div>
+    <button id="scamSendLens" onclick="silentCamSendLens()">🔍 Googleレンズへ転送</button>
+  </div>
+
+  <script>
+  // ── 無音カメラ（WebRTC） ──
+  window.capturedImageDataURL = null; // 将来のLens API連携用グローバル保持
+  var _silentStream = null;
+
+  // カメラ起動（常にアウトカメラ固定）
+  function openSilentCam() {
+    var modal = document.getElementById('silentCamModal');
+    document.getElementById('silentCamPreviewWrap').style.display = 'none';
+    document.getElementById('scamSendLens').style.display = 'none';
+    document.getElementById('scamCamLabel').textContent = '';
+
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { exact: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    })
+    .then(function(stream) {
+      _silentStream = stream;
+      document.getElementById('silentCamVideo').srcObject = stream;
+      modal.classList.add('active');
+    })
+    .catch(function(err) {
+      alert('カメラを起動できませんでした。\n許可設定を確認してください。\n（' + err.message + '）');
+    });
+  }
+
+  function closeSilentCam() {
+    if (_silentStream) {
+      _silentStream.getTracks().forEach(function(t) { t.stop(); });
+      _silentStream = null;
+    }
+    var video = document.getElementById('silentCamVideo');
+    video.srcObject = null;
+    // 表示をすべてリセット
+    video.style.display = 'block';
+    document.querySelector('.scam-btns').style.display = 'flex';
+    document.getElementById('scamCamLabel').style.display = 'block';
+    document.getElementById('silentCamPreviewWrap').style.display = 'none';
+    document.getElementById('scamSendLens').style.display = 'none';
+    document.getElementById('silentCamModal').classList.remove('active');
+  }
+
+  function silentCamShutter() {
+    var video = document.getElementById('silentCamVideo');
+    var vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw || !vh) { alert('カメラ映像の取得に失敗しました。'); return; }
+
+    var MAX = 1920;
+    var w = vw, h = vh;
+    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+    var dataURL = canvas.toDataURL('image/jpeg', 0.92);
+    canvas.width = 0; canvas.height = 0;
+
+    // カメラ即停止
+    if (_silentStream) {
+      _silentStream.getTracks().forEach(function(t) { t.stop(); });
+      _silentStream = null;
+    }
+    video.srcObject = null;
+
+    window.capturedImageDataURL = dataURL;
+
+    // videoとボタン行を隠してプレビュー＋転送ボタンだけ前面に出す
+    video.style.display = 'none';
+    document.querySelector('.scam-btns').style.display = 'none';
+    document.getElementById('scamCamLabel').style.display = 'none';
+
+    var preview = document.getElementById('silentCamPreview');
+    preview.src = dataURL;
+    document.getElementById('silentCamPreviewWrap').style.display = 'block';
+    document.getElementById('scamSendLens').style.display = 'block';
+
+    // モーダルを先頭にスクロール
+    document.getElementById('silentCamModal').scrollTop = 0;
+  }
+
+  function silentCamSendLens() {
+    if (!window.capturedImageDataURL) return;
+    var keyword  = document.getElementById('keyword').value.trim();
+    var searchKw = keyword ? keyword + ' メルカリ' : 'メルカリ';
+
+    var arr   = window.capturedImageDataURL.split(',');
+    var mime  = arr[0].match(/:(.*?);/)[1];
+    var bstr  = atob(arr[1]);
+    var u8arr = new Uint8Array(bstr.length);
+    for (var i = 0; i < bstr.length; i++) { u8arr[i] = bstr.charCodeAt(i); }
+    var file = new File([new Blob([u8arr], { type: mime })], 'image.jpg', { type: 'image/jpeg' });
+
+    var newWin = window.open('', '_blank');
+    if (!newWin) { alert('ポップアップを許可してください'); return; }
+    var doc = newWin.document;
+    doc.open();
+    doc.write('<html><head><meta name="referrer" content="no-referrer"></head><body style="background:#0f172a;color:#fff;text-align:center;padding-top:20%;"><p>Lensへ転送中...</p></body></html>');
+    doc.close();
+
+    var form = doc.createElement('form');
+    form.method = 'POST';
+    form.action = 'https://lens.google.com/upload?ep=gisbubu&hl=ja&q=' + encodeURIComponent(searchKw);
+    form.enctype = 'multipart/form-data';
+    var inp = doc.createElement('input');
+    inp.type = 'file'; inp.name = 'encoded_image';
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    inp.files = dt.files;
+    form.appendChild(inp);
+    doc.body.appendChild(form);
+    form.submit();
+
+    closeSilentCam();
+  }
+  </script>
 
 <!--======終点:STABLE======-->
 </body>
