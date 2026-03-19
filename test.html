@@ -274,7 +274,9 @@
       sites.forEach(site => {
         let btn;
         if (site.quetta) {
-          const quettaUrl = 'quetta://open?url=' + encodeURIComponent(site.url);
+          // intent://でQuettaを直接指定して開く
+          const targetPath = site.url.replace(/^https?:\/\//, '');
+          const quettaUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;end;';
           btn = `<a href="${quettaUrl}" style="text-decoration:none;">
                    <button class="open-btn">開く ➔</button>
                  </a>`;
