@@ -1153,7 +1153,7 @@
 
     if (pattern === 'B') {
       startPrice  = rivalLow;
-      targetPrice = low; // 目標を「安値」に変更
+      targetPrice = breakeven; // 損益分岐点まで値下げ
 
       // 安値ベースで利益再計算
       var bFee     = Math.floor(low * feeRate / 100);
@@ -1228,7 +1228,8 @@
       b1 += '\n現在、同商品の強力なライバル（プロ）が' + listCount + '件、' +
         '最安' + rivalLow.toLocaleString('ja-JP') + '円で出品中。' +
         'この価格帯は強敵となるため相場に追従し、ライバルと同額の' + startPrice.toLocaleString('ja-JP') + '円からスタート。' +
-        'ページ作りの質と毎日の上位表示（100円値下げ）で確実に競り勝つ戦略をとるため、';
+        'ページ作りの質と毎日の上位表示（300円値下げ）で確実に競り勝つ戦略をとる。' +
+        '損益分岐点（' + breakeven.toLocaleString('ja-JP') + '円）まで値下げを継続する。';
     } else if (pattern === 'C') {
       b1 += '\n現在、' + rivalLow.toLocaleString('ja-JP') + '円の異常安値（素人）の出品があるが、' +
         '相場乖離が激しいため競合と見なさない。売り切れを待ち、本来の相場を目指すため強気の' +
