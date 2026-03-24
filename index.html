@@ -1426,6 +1426,11 @@
     })
     .then(function(stream) {
       _silentStream = stream;
+      var track = stream.getVideoTracks()[0];
+      var capabilities = track.getCapabilities();
+      if (capabilities.zoom) {
+      track.applyConstraints({ advanced: [{ zoom: capabilities.zoom.min }] });
+    }
       document.getElementById('silentCamVideo').srcObject = stream;
       modal.classList.add('active');
     })
