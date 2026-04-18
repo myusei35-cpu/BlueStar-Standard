@@ -201,6 +201,15 @@
       document.getElementById('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
     }
 
+    // 型番リスト読み込み
+    let modelList = [];
+    fetch('model_list.csv')
+      .then(r => r.text())
+      .then(text => {
+        modelList = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      })
+      .catch(e => console.error('model_list.csvエラー:', e));
+
     //======始点: PATCH======
     function generateLinks() {
       const keyword = document.getElementById('keyword').value.trim();
@@ -357,6 +366,8 @@
       if (isEnglishInput) {
         const lowerVal = val.toLowerCase();
         matches = brandDictionary.filter(b => b.en.toLowerCase().startsWith(lowerVal)).map(b => b.en);
+        const modelMatches = modelList.filter(m => m.toLowerCase().startsWith(lowerVal));
+        matches = [...matches, ...modelMatches];
       } else {
         const kataVal = hiraToKata(val);
         matches = brandDictionary.filter(b => b.kana.startsWith(kataVal)).map(b => b.kana);
