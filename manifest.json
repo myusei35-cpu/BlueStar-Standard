@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Multi Site Sniper (Lens + Mercari)",
+  "version": "1.1.0",
+  "description": "セカスト・カインドオル・トレファク・ヤフオク 検索一覧から、Lens・メルカリ検索をまとめて開くツール。",
+  "permissions": ["scripting", "tabs"],
+  "host_permissions": [
+    "https://www.2ndstreet.jp/*",
+    "https://shop.kind.co.jp/*",
+    "https://www.trefac.jp/*",
+    "https://auctions.yahoo.co.jp/*",
+    "https://jp.mercari.com/*",
+    "https://mercari-shops.com/*",
+    "https://lens.google.com/*",
+    "https://www.google.com/*"
+  ],
+  "action": {
+    "default_title": "Multi Site Sniper"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["calc.html"],
+      "matches": ["https://jp.mercari.com/*"]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.google.com/search*",
+        "https://lens.google.com/*"
+      ],
+      "js": ["list_extractor.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://jp.mercari.com/item/*"
+      ],
+      "js": ["list_extractor.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://jp.mercari.com/shops/product/*"
+      ],
+      "js": ["list_extractor.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mercari-shops.com/*/products/*"
+      ],
+      "js": ["list_extractor.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
