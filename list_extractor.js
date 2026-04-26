@@ -1183,7 +1183,7 @@
       const startPage = parseInt(currentUrl.searchParams.get("page") || "1");
 
       const allCandidates = [];
-      const GAS_URL = "https://script.google.com/macros/s/AKfycbyyuKEhbHKBX8ux341SU3uFIpTr7-6BS-TM_v0UcqaB1HYc2f-VNqp2TziZjIRyaIt_/exec";
+      const GAS_URL = "YOUR_API_KEY";
 
       for (let p = startPage; p < startPage + totalPages; p++) {
         btn.innerHTML = `⏳ ${p - startPage + 1}/${totalPages}ページ取得中... 計${allCandidates.length}件`;
@@ -2217,7 +2217,7 @@
 // -------------------------------------------------------
   // PATCH: Shops管理ページ 価格改定ツール
   // -------------------------------------------------------
-  const SHOPS_ADMIN_GAS_URL = "https://script.google.com/macros/s/AKfycbwNzHECR_JeekOHd5pzgeDRl_SWshcNQSotSia1u0oYDzlAJllOwtUty5p4JSqtD6TM/exec";
+  const SHOPS_ADMIN_GAS_URL = "YOUR_API_KEY";
   const SHOPS_ADMIN_TOKEN = "bluestar2026";
 
   function isShopsAdminPage() {
@@ -3126,7 +3126,7 @@
   if (!location.href.includes('google.com/search') || !location.href.includes('lns')) return;
   if (document.getElementById('__bs_lens_btn__')) return;
 
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKsZ0mXU1KxovmCgxzln7Sntga-YL1H_sJfNLbfwdsRZ-O5QbJI0qLlcd3PChtQzKc/exec';
+  const GAS_URL = 'YOUR_API_KEY';
 
   // ===== FROZEN =====
   function getMercariUrls() {
@@ -3238,7 +3238,7 @@
   if (window.__bs_capture_done__) return;
   window.__bs_capture_done__ = true;
 
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKsZ0mXU1KxovmCgxzln7Sntga-YL1H_sJfNLbfwdsRZ-O5QbJI0qLlcd3PChtQzKc/exec';
+  const GAS_URL = 'YOUR_API_KEY';
 
   // ===== FROZEN =====
   function showBadge(msg) {
