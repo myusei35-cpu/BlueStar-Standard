@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>同じものを見つけるツール2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --border: #2a2a2a;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --text-dim: #888;
+    --success: #00c853;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html {
+    font-size: 18px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (max-width: 900px) {
+    html { font-size: 20px; }
+    body { padding: 6px; }
+    .header h1 { font-size: 1.6rem; }
+    .header p { font-size: 0.9rem; }
+    .btn { padding: 20px; font-size: 1.2rem; border-radius: 14px; }
+    #uploadArea { min-height: 240px; padding: 12px; }
+    #uploadArea img { width: 100%; height: auto; max-height: 70vw; object-fit: contain; }
+    .step-dot { width: 36px; height: 36px; font-size: 0.9rem; }
+    .step-label { font-size: 0.7rem; max-width: 56px; }
+    .section { padding: 14px; margin-bottom: 12px; }
+    input, textarea, select { font-size: 1.1rem; padding: 14px; }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    padding: 12px;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 12px 0;
+  }
+
+  .header h1 {
+    font-size: 1.2rem;
+    color: var(--accent);
+    letter-spacing: 1px;
+    font-weight: 900;
+  }
+
+  .header p {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    margin-top: 4px;
+  }
+
+  /* 手順インジケーター */
+  .steps {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .step {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 48px;
+  }
+
+  .step-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .step.active .step-dot {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,229,255,0.1);
+  }
+
+  .step.done .step-dot {
+    border-color: var(--success);
+    background: var(--success);
+    color: #000;
+  }
+
+  .step-label {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-align: center;
+    max-width: 48px;
+    line-height: 1.3;
+  }
+
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    margin-top: 16px;
+    min-width: 8px;
+  }
+
+  /* カード */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+  }
+
+  .card-title::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* 画像アップロード */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 28px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .upload-area.has-image {
+    padding: 0;
+    border-color: var(--success);
+  }
+
+  .upload-area img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+
+  .upload-text {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .upload-text span { color: var(--accent); font-weight: 700; }
+
+  #fileInput { display: none; }
+
+  .change-image-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.8);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  /* 入力 */
+  .input-group { margin-bottom: 14px; }
+
+  .input-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .input-field {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .input-field::placeholder { color: var(--text-dim); }
+
+  /* ボタン */
+  .btn {
+    width: 100%;
+    padding: 18px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-primary:active { background: #33ecff; transform: scale(0.98); }
+
+  .btn-primary:disabled {
+    background: var(--border);
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+
+  /* ステータス */
+  .status {
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-top: 12px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.5;
+  }
+
+  .status.show { display: flex; }
+
+  .status.loading {
+    background: rgba(0,229,255,0.1);
+    border: 1px solid rgba(0,229,255,0.3);
+    color: var(--accent);
+  }
+
+  .status.success {
+    background: rgba(0,200,83,0.1);
+    border: 1px solid rgba(0,200,83,0.3);
+    color: var(--success);
+  }
+
+  .status.error {
+    background: rgba(255,107,53,0.1);
+    border: 1px solid rgba(255,107,53,0.3);
+    color: var(--accent2);
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0,229,255,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* URL プレビュー */
+  .url-preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    word-break: break-all;
+    line-height: 1.6;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .url-preview.show { display: block; }
+
+  .open-btn {
+    margin-top: 12px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 18px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .open-btn:active { background: #33ecff; transform: scale(0.98); }
+
+  /* 待機メッセージ */
+  .waiting-msg {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    line-height: 1.9;
+    display: none;
+    margin-top: 12px;
+  }
+
+  .waiting-msg.show { display: block; }
+  .waiting-msg .highlight { color: var(--accent); font-weight: 700; }
+
+  .pulse {
+    animation: pulse 2s ease-in-out infinite;
+    font-size: 1.8rem;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  p.desc {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔍 同じものを見つけるツール2</h1>
+  <p>同じものを見つけるツール</p>
+</div>
+
+<!-- 手順インジケーター -->
+<div class="steps">
+  <div class="step active" id="step1">
+    <div class="step-dot">1</div>
+    <div class="step-label">画像＋ブランド</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step" id="step2">
+    <div class="step-dot">2</div>
+    <div class="step-label">Lens検索</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step" id="step3">
+    <div class="step-dot">3</div>
+    <div class="step-label">URL抽出</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step" id="step4">
+    <div class="step-dot">4</div>
+    <div class="step-label">Gemini比較</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step" id="step5">
+    <div class="step-dot">5</div>
+    <div class="step-label">相場把握</div>
+  </div>
+</div>
+
+<!-- STEP 1 -->
+<div class="card" id="card-input">
+  <div class="card-title">STEP 1 — 画像とブランド名</div>
+
+  <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📷</div>
+    <div class="upload-text">
+      タップして画像を選択<br>
+      <span>ギャラリーまたはカメラ</span>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+
+  <div class="input-group" style="margin-top:14px;">
+    <label class="input-label">ブランド名</label>
+    <input type="text" class="input-field" id="brandInput" placeholder="例：Supreme、ナイキ、STUSSY">
+  </div>
+
+  <button class="btn btn-primary" id="generateBtn" onclick="generateLensUrl()" disabled>
+    🔍 Lens検索URLを生成
+  </button>
+
+  <div class="status" id="status1"></div>
+</div>
+
+<!-- STEP 2 -->
+<div class="card" id="card-lens" style="display:none;">
+  <div class="card-title">STEP 2 — Google Lensで開く</div>
+  <p class="desc">
+    下のボタンでLensを開いてください。<br>
+    検索結果から<span style="color:var(--accent);font-weight:700;">スナイパーが自動抽出</span>してスプシに記録します。
+  </p>
+  <div class="url-preview show" id="lensUrlPreview"></div>
+  <button class="open-btn" id="openLensBtn">📱 Google Lensで開く</button>
+
+  <div class="waiting-msg show" id="waitingMsg">
+    <span class="pulse">⏳</span>
+    <span class="highlight">スナイパーがURLを抽出中...</span><br>
+    完了するとスプシの<span class="highlight">「検索結果」シート</span>に<br>
+    5件のURLが記録されます。
+  </div>
+</div>
+
+<script>
+  let imageBase64 = null;
+  let lensUrl = null;
+
+  document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      imageBase64 = ev.target.result;
+      const area = document.getElementById('uploadArea');
+      area.classList.add('has-image');
+      area.innerHTML = `
+        <img src="${imageBase64}" alt="選択した画像">
+        <button class="change-image-btn" onclick="resetImage(event)">変更</button>
+      `;
+      checkReady();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function resetImage(e) {
+    e.stopPropagation();
+    imageBase64 = null;
+    const area = document.getElementById('uploadArea');
+    area.classList.remove('has-image');
+    area.innerHTML = `
+      <div class="upload-icon">📷</div>
+      <div class="upload-text">タップして画像を選択<br><span>ギャラリーまたはカメラ</span></div>
+      <input type="file" id="fileInput" accept="image/*">
+    `;
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        imageBase64 = ev.target.result;
+        const area = document.getElementById('uploadArea');
+        area.classList.add('has-image');
+        area.innerHTML = `<img src="${imageBase64}" alt="選択した画像"><button class="change-image-btn" onclick="resetImage(event)">変更</button>`;
+        checkReady();
+      };
+      reader.readAsDataURL(file);
+    });
+    checkReady();
+  }
+
+  document.getElementById('brandInput').addEventListener('input', checkReady);
+
+  function checkReady() {
+    const brand = document.getElementById('brandInput').value.trim();
+    document.getElementById('generateBtn').disabled = !(imageBase64 && brand);
+  }
+
+  function setStatus(id, type, message) {
+    const el = document.getElementById(id);
+    el.className = `status show ${type}`;
+    el.innerHTML = type === 'loading' ? `<div class="spinner"></div>${message}` : message;
+  }
+
+  function setStep(n) {
+    for (let i = 1; i <= 5; i++) {
+      const el = document.getElementById(`step${i}`);
+      if (i < n) { el.classList.add('done'); el.classList.remove('active'); }
+      else if (i === n) { el.classList.add('active'); el.classList.remove('done'); }
+      else { el.classList.remove('active', 'done'); }
+    }
+  }
+
+  function generateLensUrl() {
+    const brand = document.getElementById('brandInput').value.trim();
+    if (!imageBase64 || !brand) return;
+
+    setStatus('status1', 'loading', '画像をアップロード中...');
+    document.getElementById('generateBtn').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.status === 'ok') {
+          lensUrl = result.lensUrl;
+          setStatus('status1', 'success', '✅ URL生成完了');
+          document.getElementById('lensUrlPreview').textContent = lensUrl;
+          document.getElementById('openLensBtn').onclick = () => window.open(lensUrl, '_blank');
+          document.getElementById('card-lens').style.display = 'block';
+          setStep(2);
+          document.getElementById('card-lens').scrollIntoView({ behavior: 'smooth' });
+        } else {
+          setStatus('status1', 'error', '❌ エラー: ' + result.message);
+          document.getElementById('generateBtn').disabled = false;
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status1', 'error', '❌ ' + err.message);
+        document.getElementById('generateBtn').disabled = false;
+      })
+      .generateLensUrl(brand, imageBase64);
+  }
+</script>
+
+<!-- 操作ボタン -->
+<div class="card">
+  <div class="card-title">操作</div>
+  
+  <button class="btn btn-primary" style="margin-bottom:10px;" onclick="execGas('generatePriceUrls')">
+    📊 相場URLを生成（検索結果から）
+  </button>
+  
+  <button class="btn btn-primary" style="margin-bottom:10px; background:#00c853;" onclick="execGas('generatePriceUrlsFromCapture')">
+    📊 相場URLを生成（キャプチャから）
+  </button>
+  
+  <button class="btn btn-primary" style="background:#ff6b35;" onclick="execGas('clearAllSheets')">
+    🗑️ 全シートをクリア
+  </button>
+  
+  <div class="status" id="status-ops"></div>
+</div>
+
+<script>
+  (function() {
+    console.log('width:', window.innerWidth, 'ua:', navigator.userAgent);
+    if (/Android|iPhone|Mobile/i.test(navigator.userAgent)) {
+      document.documentElement.style.fontSize = '32px';
+      document.body.style.padding = '6px';
+      const style = document.createElement('style');
+      style.textContent = `
+        .header h1 { font-size: 1.6rem !important; }
+        .header p { font-size: 0.9rem !important; }
+        .btn { padding: 20px !important; font-size: 1.2rem !important; border-radius: 14px !important; }
+        #uploadArea { min-height: 240px !important; }
+        #uploadArea img { width: 100% !important; height: auto !important; max-height: 70vw !important; object-fit: contain !important; }
+        .step-dot { width: 36px !important; height: 36px !important; font-size: 0.9rem !important; }
+        .step-label { font-size: 0.7rem !important; }
+        input, textarea { font-size: 1.1rem !important; padding: 14px !important; }
+      `;
+      document.head.appendChild(style);
+    }
+  })();
+
+  function execGas(funcName) {
+    setStatus('status-ops', 'loading', '実行中...');
+    google.script.run
+      .withSuccessHandler(function() {
+        setStatus('status-ops', 'success', '✅ 完了');
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status-ops', 'error', '❌ ' + err.message);
+      })
+    [funcName]();
+  }
+</script>
+</body>
+</html>
