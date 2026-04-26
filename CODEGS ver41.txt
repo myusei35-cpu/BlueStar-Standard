@@ -1,0 +1,386 @@
+// ===== FROZEN =====
+// ===== 同じもの探しツール2 - GAS本体 =====
+
+const SHEET_NAME_RESULTS = '検索結果';
+const SHEET_NAME_TITLES = 'タイトル一覧';
+const SHEET_NAME_PRICE = '相場';
+const TEMP_FOLDER_ID = '1c5GE7XWhDIuv0axxG2QsXyIp2mpPsOyx';
+const GEMINI_API_KEY = 'YOUR_API_KEY';
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('同じものを見つけるツール2')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const type = data.type;
+
+    if (type === 'clear_all') {
+      clearAllData();
+    } else if (type === 'mercari_urls') {
+      saveMercariUrls(data);
+    } else if (type === 'item_capture') {
+      saveItemCapture(data);
+    } else if (type === 'price_research') {
+      savePriceResearch(data);
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function generateLensUrl(brandName, imageBase64) {
+  try {
+    const ss2 = SpreadsheetApp.getActiveSpreadsheet();
+    ['検索結果', 'キャプチャ', '相場'].forEach(name => {
+      const sheet = ss2.getSheetByName(name);
+      if (sheet) sheet.clearContents();
+    });
+    const settingSheet = ss2.getSheetByName('設定');
+    if (settingSheet) settingSheet.getRange('A1:B9').clearContent();
+
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(imageBase64.split(',')[1]),
+      'image/jpeg',
+      'temp_search.jpg'
+    );
+
+    const folder = DriveApp.getFolderById(TEMP_FOLDER_ID);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    const fileId = file.getId();
+    const imageUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+
+    const query = encodeURIComponent(`${brandName} メルカリ`);
+    const lensUrl = `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(imageUrl)}&q=${query}`;
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = getOrCreateSheet(ss, '設定');
+    sheet.getRange('A1').setValue('temp_file_id');
+    sheet.getRange('B1').setValue(fileId);
+    sheet.getRange('A2').setValue('last_updated');
+    sheet.getRange('B2').setValue(new Date());
+    sheet.getRange('A3').setValue('original_image_url');
+    sheet.getRange('B3').setValue(imageUrl);
+    SpreadsheetApp.flush();
+
+    cleanTempFolder();
+
+    return { status: 'ok', lensUrl: lensUrl, fileId: fileId };
+
+  } catch (err) {
+    return { status: 'error', message: err.message };
+  }
+}
+
+function cleanTempFolder() {
+  try {
+    const folder = DriveApp.getFolderById(TEMP_FOLDER_ID);
+    const files = folder.getFiles();
+    const now = new Date();
+    while (files.hasNext()) {
+      const file = files.next();
+      const age = (now - file.getDateCreated()) / 1000 / 60;
+      if (age > 60) file.setTrashed(true);
+    }
+  } catch(e) {}
+}
+
+function saveMercariUrls(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrCreateSheet(ss, SHEET_NAME_RESULTS);
+  sheet.clearContents();
+
+  sheet.getRange('A1:D1').setValues([['No', 'メルカリURL', 'タイトル（コピペ）', 'メモ']]);
+  sheet.getRange('A1:D1').setBackground('#2d2d2d').setFontColor('#ffffff').setFontWeight('bold');
+
+  const urls = data.urls;
+  urls.forEach((item, i) => {
+    sheet.getRange(i + 2, 1, 1, 2).setValues([[item.no, item.url]]);
+  });
+
+  sheet.getRange(2, 3, urls.length, 1).setBackground('#e8f5e9');
+
+  urls.forEach((item, i) => {
+    sheet.getRange(i + 2, 2).setFormula(`=HYPERLINK("${item.url}","${item.url}")`);
+  });
+}
+
+function savePriceResearch(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrCreateSheet(ss, SHEET_NAME_PRICE);
+  sheet.clearContents();
+
+  sheet.getRange('A1:B8').setValues([
+    ['調査タイトル', data.title],
+    ['調査URL', data.url],
+    ['集計期間', data.period],
+    ['件数', data.count],
+    ['最高値', data.maxPrice],
+    ['最安値', data.minPrice],
+    ['中央値', data.medianPrice],
+    ['更新日時', new Date()]
+  ]);
+
+  sheet.getRange('A1:B8').setBackground('#f5f5f5');
+  sheet.getRange('A1:A8').setFontWeight('bold');
+}
+
+function clearAllData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ['検索結果', 'キャプチャ', '相場'].forEach(name => {
+    const sheet = ss.getSheetByName(name);
+    if (sheet) sheet.clearContents();
+  });
+}
+
+function getOrCreateSheet(ss, name) {
+  return ss.getSheetByName(name) || ss.insertSheet(name);
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('🔍 同じもの探し')
+    .addItem('ツールを開く', 'openWebApp')
+    .addItem('相場URLを生成（検索結果から）', 'generatePriceUrls')
+    .addItem('相場URLを生成（キャプチャから）', 'generatePriceUrlsFromCapture')
+    .addSeparator()
+    .addItem('🗑️ 全シートをクリア', 'clearAllSheets')
+    .addToUi();
+}
+
+function openWebApp() {
+  const url = ScriptApp.getService().getUrl();
+  const html = HtmlService.createHtmlOutput(
+    `<script>window.open('${url}');google.script.host.close();</script>`
+  );
+  SpreadsheetApp.getUi().showModalDialog(html, 'ツールを開いています...');
+}
+
+function generatePriceUrls() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('検索結果');
+  if (!sheet) return;
+
+  const lastRow = sheet.getLastRow();
+  const priceSheet = getOrCreateSheet(ss, '相場');
+
+  if (!priceSheet.getRange('A1').getValue()) {
+    priceSheet.getRange('A1:D1').setValues([['タイトル', '相場URL', '高値', '安値']]);
+    priceSheet.getRange('A1:D1').setBackground('#2d2d2d').setFontColor('#ffffff').setFontWeight('bold');
+  }
+
+  let row = Math.max(priceSheet.getLastRow() + 1, 2);
+
+  for (let i = 2; i <= lastRow; i++) {
+    const title = sheet.getRange(i, 3).getValue();
+    if (!title) continue;
+    const keyword = encodeURIComponent(title);
+    const url = `https://jp.mercari.com/search?keyword=${keyword}&item_condition_id=3&status=sold_out&seller_type=0&item_types=mercari&sort=created_time&order=desc`;
+    priceSheet.getRange(row, 1).setValue(title);
+    priceSheet.getRange(row, 2).setFormula(`=HYPERLINK("${url}","開く")`);
+    row++;
+  }
+}
+
+function generatePriceUrlsFromCapture() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const captureSheet = ss.getSheetByName('キャプチャ');
+  if (!captureSheet || captureSheet.getLastRow() < 2) return;
+
+  const lastRow = captureSheet.getLastRow();
+  const items = captureSheet.getRange(2, 1, lastRow - 1, 3).getValues();
+  const priceSheet = getOrCreateSheet(ss, '相場');
+
+  if (!priceSheet.getRange('A1').getValue()) {
+    priceSheet.getRange('A1:D1').setValues([['タイトル', '相場URL', '高値', '安値']]);
+    priceSheet.getRange('A1:D1').setBackground('#2d2d2d').setFontColor('#ffffff').setFontWeight('bold');
+  }
+
+  let row = Math.max(priceSheet.getLastRow() + 1, 2);
+
+  items.forEach((item) => {
+    const title = item[1];
+    if (!title) return;
+    const keyword = encodeURIComponent(title);
+    const url = `https://jp.mercari.com/search?keyword=${keyword}&item_condition_id=3&status=sold_out&seller_type=0&item_types=mercari&sort=created_time&order=desc`;
+    priceSheet.getRange(row, 1).setValue(title);
+    priceSheet.getRange(row, 2).setFormula(`=HYPERLINK("${url}","開く")`);
+    row++;
+  });
+}
+
+function clearAllSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ['検索結果', 'キャプチャ', '相場'].forEach(name => {
+    const sheet = ss.getSheetByName(name);
+    if (sheet) sheet.clearContents();
+  });
+  const settingSheet = ss.getSheetByName('設定');
+  if (settingSheet) settingSheet.getRange('A1:B9').clearContent();
+  return { status: 'ok' };
+}
+// ===== /FROZEN =====
+
+// ===== PATCH: saveItemCapture・fetchImageAsBase64・compareWithGemini =====
+function saveItemCapture(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrCreateSheet(ss, 'キャプチャ');
+
+  if (!sheet.getRange('A1').getValue()) {
+    sheet.getRange('A1:C1').setValues([['URL', 'タイトル', '画像URL']]);
+    sheet.getRange('A1:C1').setBackground('#2d2d2d').setFontColor('#ffffff').setFontWeight('bold');
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    const existingUrls = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+    if (existingUrls.includes(data.url)) {
+      ss.getSheetByName('設定').getRange('A9').setValue('重複検知:' + data.url.substring(30));
+      return;
+    }
+  }
+
+  const count = lastRow - 1;
+  if (count >= 10) return;
+
+  sheet.getRange(lastRow + 1, 1, 1, 3).setValues([[data.url, data.title, data.imageUrl]]);
+
+  if (count + 1 >= 9) {
+    compareWithGemini();
+  }
+}
+
+function fetchImageAsBase64(url) {
+  try {
+    const response = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    if (response.getResponseCode() !== 200) {
+      SpreadsheetApp.getActiveSpreadsheet().getSheetByName('設定').getRange('A8').setValue('画像取得失敗:' + response.getResponseCode() + ' ' + url.substring(0, 50));
+      return '';
+    }
+    return Utilities.base64Encode(response.getContent());
+  } catch(e) {
+    SpreadsheetApp.getActiveSpreadsheet().getSheetByName('設定').getRange('A8').setValue('画像取得例外:' + e.message);
+    return '';
+  }
+}
+
+function compareWithGemini() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.getSheetByName('設定').getRange('A5').setValue('Gemini実行:' + new Date());
+  const captureSheet = ss.getSheetByName('キャプチャ');
+  const inputSheet = ss.getSheetByName('設定');
+
+  if (!captureSheet || !inputSheet) return;
+
+  const originalImageUrl = inputSheet.getRange('B3').getValue();
+  if (!originalImageUrl) {
+    ss.getSheetByName('設定').getRange('A6').setValue('エラー:元画像URLなし');
+    return;
+  }
+
+  const lastRow = captureSheet.getLastRow();
+  const items = captureSheet.getRange(2, 1, lastRow - 1, 3).getValues();
+
+  const base64Original = fetchImageAsBase64(originalImageUrl);
+  const base64Items = items.map(item => fetchImageAsBase64(item[2]));
+  ss.getSheetByName('設定').getRange('A6').setValue('fetch開始 元画像=' + (base64Original ? base64Original.length : 0) + ' 商品=' + base64Items.map(b => b ? b.length : 0).join(','));
+
+  const prompt = `あなたはファッション商品の同一性を判定する専門家です。
+最初の画像の商品と、以下のリストの商品画像を比較してください。
+
+判定基準（優先順）：
+1. 完全一致：同じ型番・モデル名・固有名詞・デザイン・素材・色が全て一致
+2. 類似：ブランドとデザインは同じだが、サイズ・色・細部が異なる
+
+以下の形式で答えてください：
+完全一致:1,3
+類似:2,5
+どちらもなければ「なし」
+
+${items.map((item, i) => `${i + 1}番: ${item[1]}`).join('\n')}`;
+
+  const payload = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: 'image/jpeg', data: base64Original } },
+        ...base64Items.map(b => ({
+          inline_data: { mime_type: 'image/jpeg', data: b }
+        }))
+      ]
+    }]
+  };
+
+  let response;
+  for (let retry = 0; retry < 1; retry++) {
+    try {
+      response = UrlFetchApp.fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          contentType: 'application/json',
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
+        }
+      );
+      if (response.getResponseCode() === 200) break;
+      Utilities.sleep(3000);
+    } catch(e) {
+      Utilities.sleep(3000);
+    }
+  }
+
+  if (!response || response.getResponseCode() !== 200) {
+    ss.getSheetByName('設定').getRange('A6').setValue('fetch失敗:' + (response ? response.getResponseCode() + ' ' + response.getContentText().substring(0, 200) : 'no response'));
+    return;
+  }
+
+  const result = JSON.parse(response.getContentText());
+  const usage = result.usageMetadata;
+  ss.getSheetByName('設定').getRange('A7').setValue('tokens:入力=' + (usage ? usage.promptTokenCount : '?') + ' 出力=' + (usage ? usage.candidatesTokenCount : '?'));
+  const answer = result.candidates[0].content.parts[0].text.trim();
+  ss.getSheetByName('設定').getRange('A6').setValue('answer:' + answer);
+
+  if (answer === 'なし') return;
+
+  const exactMatch = answer.match(/完全一致[：:]([\d,\s]*)/);
+  const similarMatch = answer.match(/類似[：:]([\d,\s]*)/);
+
+  const exactNumbers = exactMatch ? exactMatch[1].split(',').map(n => parseInt(n.trim()) - 1).filter(n => !isNaN(n)) : [];
+  const similarNumbers = similarMatch ? similarMatch[1].split(',').map(n => parseInt(n.trim()) - 1).filter(n => !isNaN(n)) : [];
+
+  let targetNumbers = exactNumbers.length > 0 ? exactNumbers : similarNumbers;
+  if (targetNumbers.length === 0) {
+    targetNumbers = answer.split(',').map(n => parseInt(n.trim()) - 1).filter(n => !isNaN(n));
+  }
+  if (targetNumbers.length === 0) return;
+
+  const priceSheet = getOrCreateSheet(ss, '相場');
+  priceSheet.clearContents();
+  priceSheet.getRange('A1:D1').setValues([['タイトル', '相場URL', '高値', '安値']]);
+  priceSheet.getRange('A1:D1').setBackground('#2d2d2d').setFontColor('#ffffff').setFontWeight('bold');
+
+  let priceRow = 2;
+
+  targetNumbers.forEach((idx) => {
+    if (idx < 0 || idx >= items.length) return;
+    const title = items[idx][1];
+    const keyword = encodeURIComponent(title);
+    const url = `https://jp.mercari.com/search?keyword=${keyword}&item_condition_id=3&status=sold_out&seller_type=0&item_types=mercari&sort=created_time&order=desc`;
+    priceSheet.getRange(priceRow, 1).setValue(title);
+    priceSheet.getRange(priceRow, 2).setFormula(`=HYPERLINK("${url}","開く")`);
+    priceRow++;
+  });
+}
+// ===== /PATCH =====
