@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>BlueStar 仕入れ管理</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --bg2: #1e293b;
+      --bg3: #263348;
+      --border: rgba(255,255,255,0.08);
+      --text: #f8fafc;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --blue: #3b82f6;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --tab-research: #7c3aed;
+      --tab-stock: #0e7490;
+      --tab-sold: #059669;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { background: var(--bg); }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    .header {
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-title { font-size: 1.1em; font-weight: 800; letter-spacing: 1px; }
+    .header-title span { color: var(--blue); }
+    .header-back {
+      background: #334155; border: none; color: var(--text2);
+      border-radius: 8px; padding: 6px 12px; font-size: 0.85em; cursor: pointer;
+    }
+    .tabs {
+      display: flex; position: sticky; top: 0; z-index: 100;
+      background: #0f172a; border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      flex: 1; padding: 12px 4px; text-align: center;
+      font-size: 0.75em; font-weight: 700; color: var(--text3);
+      border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s;
+    }
+    .tab.active-research { color: var(--tab-research); border-color: var(--tab-research); }
+    .tab.active-stock    { color: var(--tab-stock);    border-color: var(--tab-stock); }
+    .tab.active-sold     { color: var(--tab-sold);     border-color: var(--tab-sold); }
+    .tab-count { display: inline-block; background: var(--bg3); border-radius: 99px; padding: 1px 6px; font-size: 0.85em; margin-left: 4px; }
+    .tab-content { display: none; padding: 12px; }
+    .tab-content.active { display: block; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+    .btn-add { flex: 1; padding: 11px; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95em; cursor: pointer; color: #fff; }
+    .btn-add-research { background: var(--tab-research); }
+    .btn-add-stock    { background: var(--tab-stock); }
+    .btn-csv { padding: 11px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; color: var(--text2); font-size: 0.85em; font-weight: 700; cursor: pointer; }
+    .item-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+    .item-card-main { display: flex; gap: 12px; padding: 12px; cursor: pointer; }
+    .item-thumb { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; background: var(--bg3); flex-shrink: 0; }
+    .item-thumb-empty { width: 72px; height: 72px; border-radius: 8px; background: var(--bg3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 1.6em; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-title { font-size: 0.9em; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+    .item-meta { font-size: 0.75em; color: var(--text2); margin-bottom: 6px; }
+    .item-prices { display: flex; gap: 8px; flex-wrap: wrap; }
+    .price-badge { font-size: 0.72em; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--bg3); }
+    .price-badge.cost   { color: var(--red); }
+    .price-badge.high   { color: var(--green); }
+    .price-badge.profit { color: var(--blue); }
+    .verdict-badge { display: inline-block; font-size: 0.7em; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 6px; }
+    .verdict-badge.ok   { background: rgba(16,185,129,0.2); color: #10b981; }
+    .verdict-badge.ng   { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .verdict-badge.warn { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .item-actions { display: none; padding: 10px 12px; border-top: 1px solid var(--border); gap: 8px; flex-wrap: wrap; }
+    .item-actions.open { display: flex; }
+    .act-btn { flex: 1; min-width: calc(50% - 4px); padding: 10px; border: none; border-radius: 8px; font-size: 0.82em; font-weight: 700; cursor: pointer; color: #fff; }
+    .act-calc   { background: #2563eb; }
+    .act-move   { background: var(--green); }
+    .act-edit   { background: #334155; color: var(--text2); border: 1px solid var(--border); }
+    .act-delete { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .act-sold   { background: var(--tab-sold); }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+    .empty-state .icon { font-size: 3em; margin-bottom: 12px; }
+    .empty-state p { font-size: 0.9em; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: flex-end; }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet { width: 100%; background: #0f172a; border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1); }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-header { position: sticky; top: 0; background: #0f172a; padding: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+    .modal-header h3 { font-size: 1em; font-weight: 800; }
+    .modal-close { background: #334155; border: none; color: var(--text2); border-radius: 8px; padding: 6px 12px; font-size: 0.85em; cursor: pointer; }
+    .modal-body { padding: 16px; padding-bottom: 32px; }
+    .form-section { margin-bottom: 16px; }
+    .form-label { font-size: 0.68em; font-weight: 700; letter-spacing: 2px; color: var(--text3); margin-bottom: 6px; display: block; }
+    .form-input { width: 100%; background: var(--bg3); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; font-size: 0.95em; outline: none; }
+    .form-input:focus { border-color: var(--blue); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .form-img-preview { width: 100%; height: 160px; background: var(--bg3); border-radius: 10px; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 0.9em; cursor: pointer; overflow: hidden; position: relative; }
+    .form-img-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+    .form-btn-primary { width: 100%; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 1em; font-weight: 800; cursor: pointer; margin-top: 8px; }
+    .form-btn-skip { width: 100%; background: transparent; color: var(--text3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 0.9em; cursor: pointer; margin-top: 8px; }
+    .confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .confirm-overlay.open { display: flex; }
+    .confirm-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; text-align: center; width: 100%; max-width: 320px; }
+    .confirm-box h4 { font-size: 1em; margin-bottom: 8px; }
+    .confirm-box p  { font-size: 0.85em; color: var(--text2); margin-bottom: 20px; }
+    .confirm-btns { display: flex; gap: 8px; }
+    .confirm-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: 700; font-size: 0.9em; cursor: pointer; }
+    .confirm-yes { background: var(--red); color: #fff; }
+    .confirm-no  { background: #334155; color: var(--text2); }
+    #calcModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; flex-direction: column; z-index: 4000; overflow: hidden; }
+    #calcModal.open { display: flex; }
+    #calcModal .calc-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #0f172a; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    #calcModal .calc-header h2 { font-size: 1em; font-weight: 800; color: var(--text); margin: 0; }
+    #calcModal .calc-header h2 span { color: var(--blue); }
+    #calcModal .close-calc { background: #334155; border: none; color: var(--text2); border-radius: 8px; padding: 6px 12px; font-size: 0.9em; cursor: pointer; }
+    #calcModal .calc-body { flex: 1; overflow-y: auto; padding: 14px 16px 40px; -webkit-overflow-scrolling: touch; }
+    .cs { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .cs-label { font-size: 0.68em; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+    .cs select { width: 100%; background: var(--bg3); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 11px 36px 11px 12px; font-size: 0.95em; outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='%2394a3b8' d='M0 0l5 7 5-7z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+    .ci2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cf { display: flex; flex-direction: column; gap: 4px; }
+    .cf label { font-size: 0.7em; font-weight: 600; color: var(--text3); }
+    .ci { position: relative; }
+    .ci input { width: 100%; background: var(--bg3); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 11px 28px 11px 12px; font-size: 1em; font-weight: 700; text-align: right; outline: none; box-sizing: border-box; }
+    .ci input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+    .ci .u { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8em; color: var(--text3); pointer-events: none; }
+    .sell-preview { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .sell-preview span:first-child { font-size: 0.78em; color: var(--text2); }
+    .sell-preview span:last-child { font-size: 1.1em; font-weight: 800; color: #60a5fa; }
+    .acc-btn { width: 100%; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); border-radius: 8px; color: #60a5fa; padding: 8px 12px; font-size: 0.78em; font-weight: 700; cursor: pointer; text-align: left; margin-top: 8px; }
+    .acc-body { display: none; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 4px; font-size: 0.75em; color: var(--text2); line-height: 1.7; }
+    .chk-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 0.88em; color: var(--text); }
+    .chk-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--blue); flex-shrink: 0; }
+    .calc-go { width: 100%; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: none; border-radius: 14px; padding: 15px; font-size: 1.1em; font-weight: 800; letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 20px rgba(37,99,235,0.4); margin-top: 4px; }
+    #calcResult { display: none; margin-top: 10px; animation: fadeSlide 0.3s ease; }
+    @keyframes fadeSlide { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .verdict2 { border-radius: 14px; padding: 16px; text-align: center; margin-bottom: 10px; border: 2px solid transparent; }
+    .verdict2.ok   { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.4); }
+    .verdict2.ng   { background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.35); }
+    .verdict2.warn { background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.35); }
+    .v-icon  { font-size: 2em; }
+    .v-label { font-size: 1.4em; font-weight: 900; letter-spacing: 2px; margin: 4px 0; }
+    .verdict2.ok   .v-label { color: #10b981; }
+    .verdict2.ng   .v-label { color: #ef4444; }
+    .verdict2.warn .v-label { color: #f59e0b; }
+    .v-reason { font-size: 0.78em; color: var(--text2); }
+    .bdown { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 10px; }
+    .br { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.88em; }
+    .br:last-child { border-bottom: none; }
+    .br .bk { color: var(--text2); }
+    .br .bv { font-weight: 700; }
+    .br .bv.pos { color: #10b981; }
+    .br .bv.neg { color: #ef4444; }
+    .br.btotal { background: var(--bg3); }
+    .br.btotal .bk { color: var(--text); font-weight: 700; }
+    .ratebar { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+    .rbl { display: flex; justify-content: space-between; margin-bottom: 7px; font-size: 0.78em; color: var(--text2); }
+    .rbl span:last-child { font-weight: 700; font-size: 1em; color: var(--text); }
+    .rbbg { background: var(--bg3); border-radius: 99px; height: 9px; overflow: hidden; }
+    .rbfill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+    .output-block { background: #0f172a; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .output-block-label { font-size: 0.68em; font-weight: 700; letter-spacing: 2px; color: var(--text3); margin-bottom: 8px; }
+    .output-block pre { color: #cbd5e1; font-size: 0.78em; line-height: 1.7; white-space: pre-wrap; word-break: break-all; margin: 0; font-family: monospace; }
+    .copy-btn { width: 100%; background: #059669; color: #fff; border: none; border-radius: 10px; padding: 11px; font-size: 0.95em; font-weight: 700; cursor: pointer; margin-top: 8px; }
+    .calc-reset { width: 100%; background: transparent; color: var(--text3); border: 1px solid var(--border); border-radius: 12px; padding: 11px; font-size: 0.9em; cursor: pointer; margin-top: 4px; }
+    #sellShipCustomRow { display: none; }
+    #outsourceCustomRow { display: none; }
+    .calc-save-btn { width: 100%; background: var(--green); color: #fff; border: none; border-radius: 12px; padding: 13px; font-size: 1em; font-weight: 800; cursor: pointer; margin-top: 8px; display: none; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title"><span>★</span> 仕入れ管理</div>
+  <button class="header-back" onclick="location.href='index.html'">← Hub</button>
+</div>
+<div class="tabs">
+  <div class="tab" id="tab-research" onclick="switchTab('research')">📋 リサーチ<span class="tab-count" id="cnt-research">0</span></div>
+  <div class="tab" id="tab-stock"    onclick="switchTab('stock')">🛒 仕入れ<span class="tab-count" id="cnt-stock">0</span></div>
+  <div class="tab" id="tab-sold"     onclick="switchTab('sold')">✅ 売却済み<span class="tab-count" id="cnt-sold">0</span></div>
+</div>
+<div class="tab-content" id="content-research">
+  <div class="toolbar">
+    <button class="btn-add btn-add-research" onclick="openAddModal('research')">＋ 新規リサーチ登録</button>
+    <button class="btn-csv" onclick="exportCSV('research')">CSV</button>
+  </div>
+  <div id="list-research"></div>
+</div>
+<div class="tab-content" id="content-stock">
+  <div class="toolbar">
+    <button class="btn-add btn-add-stock" onclick="openAddModal('stock')">＋ 直接登録</button>
+    <button class="btn-csv" onclick="exportCSV('stock')">CSV</button>
+  </div>
+  <div id="list-stock"></div>
+</div>
+<div class="tab-content" id="content-sold">
+  <div class="toolbar">
+    <button class="btn-csv" onclick="exportCSV('sold')">CSV</button>
+  </div>
+  <div id="list-sold"></div>
+</div>
+<!-- 登録モーダル -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h3 id="addModalTitle">新規登録</h3>
+      <button class="modal-close" onclick="closeAddModal()">✕ 閉じる</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <label class="form-label">商品画像</label>
+        <div class="form-img-preview" id="imgPreview" onclick="document.getElementById('imgFileInput').click()">
+          <span id="imgPreviewPlaceholder">📷 タップして画像を選択</span>
+        </div>
+        <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="onImgSelect(event)">
+      </div>
+      <div class="form-section">
+        <label class="form-label">商品タイトル *</label>
+        <input class="form-input" type="text" id="f-title" placeholder="ブランド名 + 商品名">
+      </div>
+      <div class="form-section form-row">
+        <div><label class="form-label">ブランド</label><input class="form-input" type="text" id="f-brand" placeholder="例: Supreme"></div>
+        <div><label class="form-label">型番</label><input class="form-input" type="text" id="f-model" placeholder="例: FW23"></div>
+      </div>
+      <div class="form-section form-row">
+        <div><label class="form-label">サイズ</label><input class="form-input" type="text" id="f-size" placeholder="例: M / L"></div>
+        <div><label class="form-label">状態</label><input class="form-input" type="text" id="f-condition" placeholder="例: 良好"></div>
+      </div>
+      <div class="form-section form-row" id="stockOnlyFields">
+        <div><label class="form-label">仕入れ先店舗</label><input class="form-input" type="text" id="f-shop" placeholder="例: セカスト"></div>
+        <div><label class="form-label">仕入れ日</label><input class="form-input" type="date" id="f-buydate"></div>
+      </div>
+      <div class="form-section" id="stockOnlyFields2">
+        <label class="form-label">仕入れ原価（円）</label>
+        <input class="form-input" type="number" id="f-cost" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="form-section" id="stockOnlyFields3">
+        <label class="form-label">保管場所</label>
+        <input class="form-input" type="text" id="f-location" placeholder="例: 棚A-3">
+      </div>
+      <div class="form-section">
+        <label class="form-label">メモ（高値要素等）</label>
+        <input class="form-input" type="text" id="f-memo" placeholder="例: 希少カラー、タグ付き">
+      </div>
+      <button class="form-btn-primary" onclick="saveItem()">登録する</button>
+    </div>
+  </div>
+</div>
+<!-- 仕入れ確定モーダル -->
+<div class="modal-overlay" id="moveToStockModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h3>🛒 仕入れ確定</h3>
+      <button class="modal-close" onclick="closeMoveModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">追加情報を入力してください（スキップ可）</p>
+      <div class="form-section form-row">
+        <div><label class="form-label">仕入れ先店舗</label><input class="form-input" type="text" id="m-shop" placeholder="例: セカスト"></div>
+        <div><label class="form-label">仕入れ日</label><input class="form-input" type="date" id="m-buydate"></div>
+      </div>
+      <div class="form-section">
+        <label class="form-label">仕入れ原価（円）</label>
+        <input class="form-input" type="number" id="m-cost" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="form-section">
+        <label class="form-label">保管場所</label>
+        <input class="form-input" type="text" id="m-location" placeholder="例: 棚A-3">
+      </div>
+      <button class="form-btn-primary" onclick="confirmMoveToStock()">仕入れリストへ移動</button>
+      <button class="form-btn-skip" onclick="confirmMoveToStock(true)">スキップして移動</button>
+    </div>
+  </div>
+</div>
+<!-- 売却確定モーダル -->
+<div class="modal-overlay" id="soldModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h3>✅ 売却確定</h3>
+      <button class="modal-close" onclick="document.getElementById('soldModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section form-row">
+        <div><label class="form-label">売却日</label><input class="form-input" type="date" id="s-solddate"></div>
+        <div><label class="form-label">最終売上額（円）</label><input class="form-input" type="number" id="s-soldprice" inputmode="numeric" placeholder="0" oninput="calcSoldProfit()"></div>
+      </div>
+      <div class="form-section form-row">
+        <div><label class="form-label">販売手数料（円）</label><input class="form-input" type="number" id="s-fee" inputmode="numeric" placeholder="0" oninput="calcSoldProfit()"></div>
+        <div><label class="form-label">発送送料実績（円）</label><input class="form-input" type="number" id="s-ship" inputmode="numeric" placeholder="0" oninput="calcSoldProfit()"></div>
+      </div>
+      <div class="form-section form-row">
+        <div><label class="form-label">クーポン（円）</label><input class="form-input" type="number" id="s-coupon" inputmode="numeric" placeholder="0" oninput="calcSoldProfit()"></div>
+        <div><label class="form-label">純利益（自動計算）</label><input class="form-input" type="text" id="s-profit" readonly placeholder="—" style="color:var(--green);"></div>
+      </div>
+      <button class="form-btn-primary" onclick="confirmSold()">売却済みに確定</button>
+    </div>
+  </div>
+</div>
+<!-- 削除確認 -->
+<div class="confirm-overlay" id="confirmDelete">
+  <div class="confirm-box">
+    <h4>🗑️ 削除確認</h4>
+    <p>この商品をリストから削除しますか？<br>この操作は取り消せません。</p>
+    <div class="confirm-btns">
+      <button class="confirm-btn confirm-yes" onclick="executeDelete()">削除する</button>
+      <button class="confirm-btn confirm-no" onclick="document.getElementById('confirmDelete').classList.remove('open')">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- 利益計算モーダル -->
+<div id="calcModal">
+  <div class="calc-header">
+    <h2>💹 <span>利益</span>計算</h2>
+    <button class="close-calc" onclick="closeCalcModal()">✕ 閉じる</button>
+  </div>
+  <div class="calc-body">
+    <div class="cs">
+      <div class="cs-label">🔴 仕入れ値（必須）</div>
+      <div class="cs-label" style="margin-top:4px;">仕入れ先</div>
+      <select id="cSource" onchange="onSourceChange()">
+        <option value="store">店舗（トレファク・2ndST等）</option>
+        <option value="online">オンライン（メルカリ仕入れ等）</option>
+      </select>
+      <div class="cf" style="margin-top:8px;">
+        <label>商品価格</label>
+        <div class="ci"><input type="number" id="cCost" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+      </div>
+      <div id="onlineShippingRow" style="display:none;margin-top:8px;">
+        <div class="cf"><label>仕入れ送料</label>
+          <div class="ci"><input type="number" id="cBuyShip" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="cs">
+      <div class="cs-label">🔴 メルカリ相場（必須）</div>
+      <div class="ci2">
+        <div class="cf"><label>高値</label>
+          <div class="ci"><input type="number" id="cHigh" inputmode="numeric" placeholder="0" oninput="updateSellPreview()"><span class="u">円</span></div>
+        </div>
+        <div class="cf"><label>安値（最安値）</label>
+          <div class="ci"><input type="number" id="cLow" inputmode="numeric" placeholder="0" oninput="updateSellPreview()"><span class="u">円</span></div>
+        </div>
+      </div>
+      <div class="sell-preview">
+        <span>売れる価格（÷2×0.98、100円単位）</span>
+        <span id="cSellPreview">— 円</span>
+      </div>
+      <button class="acc-btn" onclick="toggleAcc('accRule')">❓ 高値・安値の抽出ルール</button>
+      <div class="acc-body" id="accRule">
+【対象期間のルール】
+・基本は「直近半年以内」の売り切れデータを使用する。
+・アパレル等で「半年〜1年前」の季節物データを使用する場合は、必ず下の「⏳過去データ/季節物」にチェックを入れること。
+
+【高値の決定ルール】
+・最高値に「青い炎（即売れ）」がある場合 → 最高値を高値とする
+・青い炎がなく、データが3件以上 → 上から2番目を高値とする
+・データが1〜2件で青い炎なし → 最高値を高値とする
+
+【安値の決定ルール】
+・「過去の最安値」と「現在のライバル最安値」を比較し、安い方を入力する。
+      </div>
+    </div>
+    <div class="cs">
+      <div class="cs-label">販売先・手数料</div>
+      <select id="cFeeSelect">
+        <option value="10">ショップス（10%）</option>
+        <option value="10">メルカリ（10%）</option>
+        <option value="10">ヤフオク（10%）</option>
+        <option value="5">ヤフーフリマ（5%）</option>
+      </select>
+    </div>
+    <div class="cs">
+      <div class="cs-label">🔵 販売送料（任意）</div>
+      <select id="cSellShip" onchange="onSellShipChange()">
+        <option value="0">送料なし / 込み（0円）</option>
+        <optgroup label="── らくらくメルカリ便（ヤマト）──">
+        <option value="210">ネコポス（210円）</option>
+        <option value="450">宅急便コンパクト（450円）</option>
+        <option value="750">宅急便 60サイズ（750円）</option>
+        <option value="850">宅急便 80サイズ（850円）</option>
+        <option value="1050">宅急便 100サイズ（1,050円）</option>
+        <option value="1200">宅急便 120サイズ（1,200円）</option>
+        <option value="1450">宅急便 140サイズ（1,450円）</option>
+        <option value="1700">宅急便 160サイズ（1,700円）</option>
+        </optgroup>
+        <optgroup label="── ゆうゆうメルカリ便（日本郵便）──">
+        <option value="160">ゆうパケットポストmini（160円）</option>
+        <option value="215">ゆうパケットポスト（215円）</option>
+        <option value="230">ゆうパケット（230円）</option>
+        <option value="455">ゆうパケットプラス（455円）</option>
+        <option value="750">ゆうパック 60サイズ（750円）</option>
+        <option value="870">ゆうパック 80サイズ（870円）</option>
+        <option value="1070">ゆうパック 100サイズ（1,070円）</option>
+        <option value="1200">ゆうパック 120サイズ（1,200円）</option>
+        <option value="1450">ゆうパック 140サイズ（1,450円）</option>
+        <option value="1700">ゆうパック 160サイズ（1,700円）</option>
+        <option value="1900">ゆうパック 170サイズ（1,900円）</option>
+        </optgroup>
+        <option value="custom">自由入力</option>
+      </select>
+      <div id="sellShipCustomRow" style="margin-top:8px;">
+        <div class="cf"><label>送料（手入力）</label>
+          <div class="ci"><input type="number" id="cSellShipCustom" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="cs">
+      <div class="cs-label">🔵 外注費（任意）</div>
+      <select id="cOutsource" onchange="onOutsourceChange()">
+        <option value="0">なし（0円）</option>
+        <option value="400">400円</option>
+        <option value="500">500円</option>
+        <option value="custom">自由入力</option>
+      </select>
+      <div id="outsourceCustomRow" style="margin-top:8px;">
+        <div class="cf"><label>外注費（手入力）</label>
+          <div class="ci"><input type="number" id="cOutsourceCustom" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="cs">
+      <div class="cs-label">🔵 回転率・ライバル分析（任意）</div>
+      <div class="ci2">
+        <div class="cf"><label>売れた件数</label>
+          <div class="ci"><input type="number" id="cSoldCount" inputmode="numeric" placeholder="0"><span class="u">件</span></div>
+        </div>
+        <div class="cf"><label>現在の出品数</label>
+          <div class="ci"><input type="number" id="cListCount" inputmode="numeric" placeholder="0"><span class="u">件</span></div>
+        </div>
+      </div>
+      <div class="cf" style="margin-top:8px;"><label>売れた日数</label>
+        <div class="ci"><input type="number" id="cSoldDays" inputmode="numeric" placeholder="未入力でも可"><span class="u">日</span></div>
+      </div>
+      <div class="ci2" style="margin-top:8px;">
+        <div class="cf"><label>販売中の最安値（任意）</label>
+          <div class="ci"><input type="number" id="cRivalLow" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+        </div>
+        <div class="cf"><label>管理番号プレフィックス</label>
+          <div class="ci"><input type="text" id="cPrefix" placeholder="B" style="text-align:left;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="cs">
+      <div class="cs-label">🔵 特殊フラグ（任意）</div>
+      <label class="chk-row"><input type="checkbox" id="chkSeasonal"><span>⏳ 過去データ / 季節物</span></label>
+      <label class="chk-row"><input type="checkbox" id="chkInstant"><span>🔥 即売れ（青い炎あり）</span></label>
+    </div>
+    <button class="calc-go" onclick="runCalc()">▶ 判定する</button>
+    <div id="calcResult">
+      <div class="verdict2" id="cVerdict"><div class="v-icon" id="cVIcon"></div><div class="v-label" id="cVLabel"></div><div class="v-reason" id="cVReason"></div></div>
+      <div class="bdown" id="breakdownArea">
+        <div class="br"><span class="bk">売れる価格</span><span class="bv" id="rSP"></span></div>
+        <div class="br"><span class="bk">　└ 仕入れ値</span><span class="bv neg" id="rCC"></span></div>
+        <div class="br"><span class="bk">　└ 仕入れ送料</span><span class="bv neg" id="rBS"></span></div>
+        <div class="br"><span class="bk">　└ 販売手数料</span><span class="bv neg" id="rFF"></span></div>
+        <div class="br"><span class="bk">　└ 送料</span><span class="bv neg" id="rSS"></span></div>
+        <div class="br"><span class="bk">　└ 外注費</span><span class="bv neg" id="rOU"></span></div>
+        <div class="br btotal"><span class="bk">純利益</span><span class="bv" id="rPR"></span></div>
+        <div class="br btotal"><span class="bk">ROI</span><span class="bv" id="rROI"></span></div>
+      </div>
+      <div class="ratebar"><div class="rbl"><span>利益率</span><span id="rRL"></span></div><div class="rbbg"><div class="rbfill" id="rRB" style="width:0%"></div></div></div>
+      <div class="bdown" id="scoreArea" style="display:none;">
+        <div class="br"><span class="bk">⭐ 利益率(ROI)</span><span class="bv" id="sROI"></span></div>
+        <div class="br"><span class="bk">⭐ 回転率</span><span class="bv" id="sSpeed"></span></div>
+        <div class="br"><span class="bk">⭐ 仕入れ推奨度</span><span class="bv" id="sScore"></span></div>
+        <div class="br"><span class="bk">　└ 超速回転</span><span class="bv" id="s1"></span></div>
+        <div class="br"><span class="bk">　└ 消化率</span><span class="bv" id="s2"></span></div>
+        <div class="br"><span class="bk">　└ 競合リスク</span><span class="bv" id="s3"></span></div>
+        <div class="br"><span class="bk">　└ 最悪想定</span><span class="bv" id="s4"></span></div>
+        <div class="br"><span class="bk">　└ 高値の信憑性</span><span class="bv" id="s5"></span></div>
+        <div class="br" id="sPenaltyRow" style="display:none;"><span class="bk">　└ ⚠️ ペナルティ</span><span class="bv neg" id="sPenalty"></span></div>
+        <div class="br" id="sBonusRow" style="display:none;"><span class="bk">　└ 🔥 即売れボーナス</span><span class="bv" style="color:#f59e0b" id="sBonus"></span></div>
+      </div>
+      <div class="bdown" id="worstArea">
+        <div class="br"><span class="bk">最悪想定利益（安値ベース）</span><span class="bv" id="rWorst"></span></div>
+        <div class="br"><span class="bk">予想収支</span><span class="bv" id="rNet"></span></div>
+      </div>
+      <div class="output-block" id="block1Area" style="display:none;"><div class="output-block-label">📝 相場分析と戦略</div><pre id="block1Text"></pre></div>
+      <div class="output-block" id="block2Area" style="display:none;"><div class="output-block-label">🗓️ 値下げスケジュール</div><pre id="block2Text"></pre><button class="copy-btn" onclick="copyBlock('block2Text',this)">📋 コピー</button></div>
+      <div class="output-block" id="block3Area" style="display:none;"><div class="output-block-label">🔑 管理番号</div><pre id="block3Text"></pre><button class="copy-btn" onclick="copyBlock('block3Text',this)">📋 コピー</button></div>
+      <button class="calc-save-btn" id="calcSaveBtn" onclick="saveCalcResult()">💾 この結果を商品に保存</button>
+    </div>
+    <button class="calc-reset" onclick="resetCalc2()">↺ リセット</button>
+  </div>
+</div>
+
+<script>
+var DB_NAME='bluestar_inventory',DB_VER=1,db;
+function openDB(cb){if(db){cb();return;}var req=indexedDB.open(DB_NAME,DB_VER);req.onupgradeneeded=function(e){var d=e.target.result;if(!d.objectStoreNames.contains('items')){var s=d.createObjectStore('items',{keyPath:'id'});s.createIndex('status','status',{unique:false});}};req.onsuccess=function(e){db=e.target.result;cb();};req.onerror=function(){alert('DBエラー');};}
+function dbGetAll(cb){openDB(function(){var req=db.transaction('items','readonly').objectStore('items').getAll();req.onsuccess=function(e){cb(e.target.result);}});}
+function dbPut(item,cb){openDB(function(){var tx=db.transaction('items','readwrite');tx.objectStore('items').put(item);tx.oncomplete=function(){if(cb)cb();}});}
+function dbDelete(id,cb){openDB(function(){var tx=db.transaction('items','readwrite');tx.objectStore('items').delete(id);tx.oncomplete=function(){if(cb)cb();}});}
+var currentTab='research',currentEditId=null,pendingDeleteId=null,pendingMoveId=null,pendingSoldId=null,calcTargetId=null,currentImgData=null;
+function switchTab(tab){currentTab=tab;['research','stock','sold'].forEach(function(t){document.getElementById('content-'+t).classList.toggle('active',t===tab);var el=document.getElementById('tab-'+t);el.className='tab'+(t===tab?' active-'+t:'');});renderAll();}
+function renderAll(){dbGetAll(function(items){var r=items.filter(function(i){return i.status==='research';});var s=items.filter(function(i){return i.status==='stock';});var d=items.filter(function(i){return i.status==='sold';});document.getElementById('cnt-research').textContent=r.length;document.getElementById('cnt-stock').textContent=s.length;document.getElementById('cnt-sold').textContent=d.length;renderList('research',r);renderList('stock',s);renderList('sold',d);});}
+function renderList(type,items){var el=document.getElementById('list-'+type);if(items.length===0){el.innerHTML='<div class="empty-state"><div class="icon">'+(type==='research'?'📋':type==='stock'?'🛒':'✅')+'</div><p>まだ登録がありません</p></div>';return;}el.innerHTML=items.map(function(item){var thumb=item.imgData?'<img class="item-thumb" src="'+item.imgData+'">'  :'<div class="item-thumb-empty">📦</div>';var vb=item.calcVerdict?'<span class="verdict-badge '+item.calcVerdict+'">'+(item.calcVerdict==='ok'?'✅推奨':item.calcVerdict==='ng'?'❌非推奨':'⚠️要検討')+'</span>':'';var pi='';if(item.cost)pi+='<span class="price-badge cost">仕入 ¥'+Number(item.cost).toLocaleString()+'</span>';if(item.calcHigh)pi+='<span class="price-badge high">高値 ¥'+Number(item.calcHigh).toLocaleString()+'</span>';if(item.calcProfit)pi+='<span class="price-badge profit">利益 ¥'+Number(item.calcProfit).toLocaleString()+'</span>';var actions='';if(type==='research'){actions='<button class="act-btn act-calc" onclick="openCalcForItem(\''+item.id+'\')">💹 利益計算</button><button class="act-btn act-move" onclick="openMoveModal(\''+item.id+'\')">🛒 仕入れ確定</button><button class="act-btn act-edit" onclick="openEditModal(\''+item.id+'\')">✏️ 編集</button><button class="act-btn act-delete" onclick="openDeleteConfirm(\''+item.id+'\')">🗑️ 削除</button>';}else if(type==='stock'){actions='<button class="act-btn act-calc" onclick="openCalcForItem(\''+item.id+'\')">💹 利益計算</button><button class="act-btn act-sold" onclick="openSoldModal(\''+item.id+'\')">✅ 売却確定</button><button class="act-btn act-edit" onclick="openEditModal(\''+item.id+'\')">✏️ 編集</button><button class="act-btn act-delete" onclick="openDeleteConfirm(\''+item.id+'\')">🗑️ 削除</button>';}else{actions='<button class="act-btn act-edit" onclick="openEditModal(\''+item.id+'\')">✏️ 詳細</button>';}return'<div class="item-card" id="card-'+item.id+'"><div class="item-card-main" onclick="toggleCard(\''+item.id+'\')">'+thumb+'<div class="item-info"><div class="item-title">'+(item.title||'（タイトルなし）')+vb+'</div><div class="item-meta">'+[item.brand,item.size,item.condition].filter(Boolean).join(' / ')+'</div><div class="item-prices">'+pi+'</div></div></div><div class="item-actions" id="actions-'+item.id+'">'+actions+'</div></div>';}).join('');}
+function toggleCard(id){document.getElementById('actions-'+id).classList.toggle('open');}
+var addModalType='research';
+function openAddModal(type){addModalType=type;currentEditId=null;currentImgData=null;clearAddForm();document.getElementById('addModalTitle').textContent=type==='research'?'📋 新規リサーチ登録':'🛒 仕入れ直接登録';['stockOnlyFields','stockOnlyFields2','stockOnlyFields3'].forEach(function(id){document.getElementById(id).style.display=type==='stock'?'block':'none';});if(type==='stock')document.getElementById('f-buydate').value=todayStr();document.getElementById('addModal').classList.add('open');}
+function closeAddModal(){document.getElementById('addModal').classList.remove('open');currentEditId=null;currentImgData=null;}
+function clearAddForm(){['f-title','f-brand','f-model','f-size','f-condition','f-shop','f-cost','f-location','f-memo'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('f-buydate').value='';document.getElementById('imgPreview').innerHTML='<span id="imgPreviewPlaceholder">📷 タップして画像を選択</span>';currentImgData=null;}
+function onImgSelect(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){var img=new Image();img.onload=function(){var MAX=600,w=img.width,h=img.height;if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}var canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);currentImgData=canvas.toDataURL('image/jpeg',0.75);document.getElementById('imgPreview').innerHTML='<img src="'+currentImgData+'">';};img.src=ev.target.result;};reader.readAsDataURL(file);}
+function saveItem(){var title=document.getElementById('f-title').value.trim();if(!title){alert('タイトルを入力してください');return;}if(currentEditId){dbGetAll(function(items){var item=items.find(function(i){return i.id===currentEditId;});if(!item)return;fillItemFields(item);dbPut(item,function(){closeAddModal();renderAll();});});}else{var item={id:'item_'+Date.now(),status:addModalType,createdAt:Date.now()};fillItemFields(item);dbPut(item,function(){closeAddModal();renderAll();});}}
+function fillItemFields(item){item.title=document.getElementById('f-title').value.trim();item.brand=document.getElementById('f-brand').value.trim();item.model=document.getElementById('f-model').value.trim();item.size=document.getElementById('f-size').value.trim();item.condition=document.getElementById('f-condition').value.trim();item.memo=document.getElementById('f-memo').value.trim();if(currentImgData)item.imgData=currentImgData;var shop=document.getElementById('f-shop').value.trim();var cost=document.getElementById('f-cost').value;var loc=document.getElementById('f-location').value.trim();var buydate=document.getElementById('f-buydate').value;if(shop)item.shop=shop;if(cost)item.cost=cost;if(loc)item.location=loc;if(buydate)item.buydate=buydate;}
+function openEditModal(id){dbGetAll(function(items){var item=items.find(function(i){return i.id===id;});if(!item)return;currentEditId=id;currentImgData=null;addModalType=item.status;document.getElementById('addModalTitle').textContent='✏️ 編集';document.getElementById('f-title').value=item.title||'';document.getElementById('f-brand').value=item.brand||'';document.getElementById('f-model').value=item.model||'';document.getElementById('f-size').value=item.size||'';document.getElementById('f-condition').value=item.condition||'';document.getElementById('f-memo').value=item.memo||'';document.getElementById('f-shop').value=item.shop||'';document.getElementById('f-cost').value=item.cost||'';document.getElementById('f-location').value=item.location||'';document.getElementById('f-buydate').value=item.buydate||'';if(item.imgData){document.getElementById('imgPreview').innerHTML='<img src="'+item.imgData+'">';}else{document.getElementById('imgPreview').innerHTML='<span>📷 タップして画像を変更</span>';}['stockOnlyFields','stockOnlyFields2','stockOnlyFields3'].forEach(function(fid){document.getElementById(fid).style.display='block';});document.getElementById('addModal').classList.add('open');});}
+function openDeleteConfirm(id){pendingDeleteId=id;document.getElementById('confirmDelete').classList.add('open');}
+function executeDelete(){if(!pendingDeleteId)return;dbDelete(pendingDeleteId,function(){pendingDeleteId=null;document.getElementById('confirmDelete').classList.remove('open');renderAll();});}
+function openMoveModal(id){pendingMoveId=id;document.getElementById('m-shop').value='';document.getElementById('m-cost').value='';document.getElementById('m-location').value='';document.getElementById('m-buydate').value=todayStr();document.getElementById('moveToStockModal').classList.add('open');}
+function closeMoveModal(){document.getElementById('moveToStockModal').classList.remove('open');}
+function confirmMoveToStock(skip){if(!pendingMoveId)return;dbGetAll(function(items){var item=items.find(function(i){return i.id===pendingMoveId;});if(!item)return;item.status='stock';if(!skip){var shop=document.getElementById('m-shop').value.trim();var cost=document.getElementById('m-cost').value;var loc=document.getElementById('m-location').value.trim();var buydate=document.getElementById('m-buydate').value;if(shop)item.shop=shop;if(cost)item.cost=cost;if(loc)item.location=loc;if(buydate)item.buydate=buydate;}dbPut(item,function(){pendingMoveId=null;closeMoveModal();switchTab('stock');});});}
+function openSoldModal(id){pendingSoldId=id;document.getElementById('s-solddate').value=todayStr();document.getElementById('s-soldprice').value='';document.getElementById('s-fee').value='';document.getElementById('s-ship').value='';document.getElementById('s-coupon').value='';document.getElementById('s-profit').value='';document.getElementById('soldModal').classList.add('open');}
+function calcSoldProfit(){var sold=parseFloat(document.getElementById('s-soldprice').value)||0;var fee=parseFloat(document.getElementById('s-fee').value)||0;var ship=parseFloat(document.getElementById('s-ship').value)||0;var coupon=parseFloat(document.getElementById('s-coupon').value)||0;dbGetAll(function(items){var item=pendingSoldId?items.find(function(i){return i.id===pendingSoldId;}):null;var cost=item?(parseFloat(item.cost)||0):0;var profit=sold-fee-ship-coupon-cost;document.getElementById('s-profit').value=profit!==0?(profit>=0?'+':'')+profit.toLocaleString()+'円':'';})}
+function confirmSold(){if(!pendingSoldId)return;dbGetAll(function(items){var item=items.find(function(i){return i.id===pendingSoldId;});if(!item)return;item.status='sold';item.solddate=document.getElementById('s-solddate').value;item.soldprice=document.getElementById('s-soldprice').value;item.soldFee=document.getElementById('s-fee').value;item.soldShip=document.getElementById('s-ship').value;item.coupon=document.getElementById('s-coupon').value;var cost=parseFloat(item.cost)||0,sold=parseFloat(item.soldprice)||0,fee=parseFloat(item.soldFee)||0,ship=parseFloat(item.soldShip)||0,coupon=parseFloat(item.coupon)||0;item.netProfit=sold-fee-ship-coupon-cost;dbPut(item,function(){pendingSoldId=null;document.getElementById('soldModal').classList.remove('open');switchTab('sold');});});}
+function openCalcForItem(id){calcTargetId=id;document.getElementById('calcSaveBtn').style.display='none';document.getElementById('calcModal').classList.add('open');}
+function closeCalcModal(){document.getElementById('calcModal').classList.remove('open');}
+function saveCalcResult(){if(!calcTargetId)return;var lbl=document.getElementById('cVLabel').textContent;var verdict=lbl.includes('非推奨')?'ng':lbl.includes('推奨')?'ok':'warn';var high=parseFloat(document.getElementById('cHigh').value)||0;var low=parseFloat(document.getElementById('cLow').value)||0;var profitText=document.getElementById('rPR').textContent.replace(/[^0-9\-]/g,'');var profit=parseInt(profitText)||0;dbGetAll(function(items){var item=items.find(function(i){return i.id===calcTargetId;});if(!item)return;item.calcVerdict=verdict;item.calcHigh=high;item.calcLow=low;item.calcProfit=profit;dbPut(item,function(){document.getElementById('calcSaveBtn').style.display='none';closeCalcModal();renderAll();});});}
+function exportCSV(type){dbGetAll(function(items){var filtered=items.filter(function(i){return i.status===type;});if(filtered.length===0){alert('データがありません');return;}var headers=['管理ID','ステータス','仕入日','仕入先店舗','ブランド・商品名','型番','サイズ・状態','仕入原価','保管場所','想定高値','想定安値','メモ','売却日','最終売上額','販売手数料','発送送料','クーポン','純利益'];var rows=filtered.map(function(item){return[item.id,item.status,item.buydate||'',item.shop||'',item.title||'',item.model||'',(item.size||'')+(item.condition?' '+item.condition:''),item.cost||'',item.location||'',item.calcHigh||'',item.calcLow||'',item.memo||'',item.solddate||'',item.soldprice||'',item.soldFee||'',item.soldShip||'',item.coupon||'',item.netProfit||''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');});var csv='\uFEFF'+headers.join(',')+'\n'+rows.join('\n');var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='bluestar_'+type+'_'+todayStr()+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);});}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function round100(n){return Math.round(n/100)*100;}
+function fmt(n){return n.toLocaleString('ja-JP')+'円';}
+function stars(n){return'⭐'.repeat(Math.max(0,Math.min(5,n)));}
+var _roiBarTimer=null;
+function setRoiBar(roi){var pct=Math.min(Math.max(roi,0),60);var bc=roi>=30?'#10b981':roi>=20?'#f59e0b':'#ef4444';document.getElementById('rRL').textContent=roi.toFixed(1)+'%';var bar=document.getElementById('rRB');bar.style.width='0%';bar.style.background=bc;if(_roiBarTimer!==null){clearTimeout(_roiBarTimer);_roiBarTimer=null;}_roiBarTimer=setTimeout(function(){bar.style.width=(pct/60*100)+'%';_roiBarTimer=null;},50);}
+function updateSellPreview(){var h=parseFloat(document.getElementById('cHigh').value)||0;var l=parseFloat(document.getElementById('cLow').value)||0;if(h===0&&l===0){document.getElementById('cSellPreview').textContent='— 円';return;}document.getElementById('cSellPreview').textContent=round100((h+l)/2*0.98).toLocaleString('ja-JP')+' 円';}
+function onSourceChange(){document.getElementById('onlineShippingRow').style.display=document.getElementById('cSource').value==='online'?'block':'none';}
+function toggleAcc(id){var el=document.getElementById(id);el.style.display=el.style.display==='block'?'none':'block';}
+function onSellShipChange(){document.getElementById('sellShipCustomRow').style.display=document.getElementById('cSellShip').value==='custom'?'block':'none';}
+function onOutsourceChange(){document.getElementById('outsourceCustomRow').style.display=document.getElementById('cOutsource').value==='custom'?'block':'none';}
+function copyBlock(preId,btn){var text=document.getElementById(preId).textContent;var orig=btn.textContent;if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){btn.textContent='✅ コピーしました！';setTimeout(function(){btn.textContent=orig;},2000);});}else{var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='✅ コピーしました！';setTimeout(function(){btn.textContent=orig;},2000);}}
+function buildSchedule(start,target,down){var lines=[],cur=start,day=0;while(cur>target&&day<365){day++;var next=cur-down;if(next<=target){lines.push('最終'+day+'日後に'+target.toLocaleString('ja-JP')+'円');break;}lines.push(day+'日後に'+next.toLocaleString('ja-JP')+'円');cur=next;}return lines.join('\n');}
+function getTodayMMDD(){var d=new Date();return String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');}
+function toK(n){return Math.ceil(n/1000);}
+function runCalc(){var cost=parseFloat(document.getElementById('cCost').value)||0;var high=parseFloat(document.getElementById('cHigh').value)||0;var low=parseFloat(document.getElementById('cLow').value)||0;var shipV=document.getElementById('cSellShip').value;var ship=shipV==='custom'?(parseFloat(document.getElementById('cSellShipCustom').value)||0):parseFloat(shipV)||0;var outsV=document.getElementById('cOutsource').value;var outs=outsV==='custom'?(parseFloat(document.getElementById('cOutsourceCustom').value)||0):parseFloat(outsV)||0;var isOnline=document.getElementById('cSource').value==='online';var buyShip=isOnline?(parseFloat(document.getElementById('cBuyShip').value)||0):0;var feeRate=parseFloat(document.getElementById('cFeeSelect').value)||10;var soldCount=parseInt(document.getElementById('cSoldCount').value)||0;var listCount=parseInt(document.getElementById('cListCount').value)||0;var soldDays=parseInt(document.getElementById('cSoldDays').value)||0;var rivalLow=parseFloat(document.getElementById('cRivalLow').value)||0;var prefix=document.getElementById('cPrefix').value.trim()||'B';var isSeasonal=document.getElementById('chkSeasonal').checked;var isInstant=document.getElementById('chkInstant').checked;if(cost===0){alert('仕入れ値を入力してください');return;}if(high===0&&low===0){alert('高値・安値を入力してください');return;}var sellPrice=round100((high+low)/2*0.98);var fee=Math.floor(sellPrice*feeRate/100);var income=sellPrice-fee-ship-outs;var totalCost=cost+buyShip;var profit=income-totalCost;var roi=totalCost>0?(profit/totalCost*100):0;var breakeven=Math.ceil((totalCost+ship+outs)/(1-feeRate/100));var worstSell=round100(low*0.98);var worstFee=Math.floor(worstSell*feeRate/100);var worstIncome=worstSell-worstFee-ship-outs;var worstProfit=worstIncome-totalCost;document.getElementById('rSP').textContent=fmt(sellPrice);document.getElementById('rCC').textContent='- '+fmt(cost);document.getElementById('rBS').textContent=buyShip>0?'- '+fmt(buyShip):'—';document.getElementById('rFF').textContent='- '+fmt(fee)+'（'+feeRate+'%）';document.getElementById('rSS').textContent=ship>0?'- '+fmt(ship):'—';document.getElementById('rOU').textContent=outs>0?'- '+fmt(outs):'—';var prEl=document.getElementById('rPR');prEl.textContent=(profit>=0?'+':'')+fmt(profit);prEl.className='bv '+(profit>=0?'pos':'neg');document.getElementById('rROI').textContent=roi.toFixed(1)+'%';document.getElementById('rROI').className='bv '+(roi>=0?'pos':'neg');setRoiBar(roi);document.getElementById('rWorst').textContent=(worstProfit>=0?'+':'')+fmt(worstProfit);document.getElementById('rWorst').className='bv '+(worstProfit>=0?'pos':'neg');document.getElementById('rNet').textContent=fmt(income);var okProfit,okROI,bandLabel;if(cost<4000){okProfit=1500;okROI=50;bandLabel='0〜3,999円帯';}else if(cost<8000){okProfit=2000;okROI=35;bandLabel='4,000〜7,999円帯';}else if(cost<15000){okProfit=3000;okROI=30;bandLabel='8,000〜14,999円帯';}else{okProfit=5000;okROI=25;bandLabel='15,000円以上帯';}var vd=document.getElementById('cVerdict');var icon=document.getElementById('cVIcon');var label=document.getElementById('cVLabel');var reason=document.getElementById('cVReason');vd.className='verdict2';if(profit<okProfit||roi<okROI){vd.classList.add('ng');icon.textContent='❌';label.textContent='非推奨';reason.textContent='利益・ROI基準未達（'+bandLabel+'）純利益基準:'+fmt(okProfit)+' / ROI基準:'+okROI+'%';document.getElementById('scoreArea').style.display='none';document.getElementById('block1Area').style.display='none';document.getElementById('block2Area').style.display='none';document.getElementById('block3Area').style.display='none';document.getElementById('calcResult').style.display='block';document.getElementById('calcSaveBtn').style.display='block';document.querySelector('#calcModal .calc-body').scrollTo({top:99999,behavior:'smooth'});return;}var hasOptional=(soldCount>0||listCount>0||soldDays>0||isSeasonal||isInstant);if(!hasOptional){vd.classList.add('warn');icon.textContent='⚠️';label.textContent='簡易判定クリア';reason.textContent='STEP1通過（'+bandLabel+'）詳細判定は未実施';document.getElementById('scoreArea').style.display='none';document.getElementById('calcResult').style.display='block';showOutputBlocks(high,low,sellPrice,breakeven,listCount,rivalLow,profit,roi,okProfit,okROI,feeRate,ship,outs,totalCost,prefix);document.getElementById('calcSaveBtn').style.display='block';document.querySelector('#calcModal .calc-body').scrollTo({top:99999,behavior:'smooth'});return;}var sc1=soldDays>0&&soldDays<=10?1:0;var sc2=(soldCount>0&&(soldCount+listCount)>0)?((soldCount/(soldCount+listCount))>=0.3?1:0):0;var sc3=listCount<=15?1:0;var sc4=worstProfit>=0?1:0;var sc5=soldCount===1?0:1;var totalScore=sc1+sc2+sc3+sc4+sc5;var penalty=0,bonus=0,penaltyApplied=false;if(isSeasonal&&listCount>=soldCount&&soldCount>0){if(soldCount>=listCount*2){penaltyApplied=false;}else{penalty=-2;penaltyApplied=true;}}if(isInstant)bonus=1;totalScore=Math.min(5,totalScore+penalty+bonus);document.getElementById('scoreArea').style.display='block';var dot=function(n){return n?'✅ +1':'❌ 0';};document.getElementById('s1').textContent=soldDays>0?dot(sc1)+'（'+soldDays+'日）':'— 未入力';document.getElementById('s2').textContent=(soldCount>0||listCount>0)?dot(sc2):'— 未入力';document.getElementById('s3').textContent=dot(sc3)+'（出品'+listCount+'件）';document.getElementById('s4').textContent=dot(sc4)+'（最悪'+(worstProfit>=0?'+':'')+fmt(worstProfit)+'）';document.getElementById('s5').textContent=dot(sc5);if(penaltyApplied){document.getElementById('sPenaltyRow').style.display='flex';document.getElementById('sPenalty').textContent='-2点（⏳過去データ×在庫リスク）';}else{document.getElementById('sPenaltyRow').style.display='none';}if(isInstant){document.getElementById('sBonusRow').style.display='flex';document.getElementById('sBonus').textContent='+1点（🔥即売れ）';}else{document.getElementById('sBonusRow').style.display='none';}var roiStar=roi>=60?5:roi>=40?4:roi>=30?3:roi>=20?2:1;var speedStar=soldDays===0?1:soldDays<=3?5:soldDays<=7?4:soldDays<=14?3:soldDays<=30?2:1;document.getElementById('sROI').textContent=stars(roiStar)+' ROI '+roi.toFixed(1)+'%';document.getElementById('sSpeed').textContent=stars(speedStar)+(soldDays>0?' '+soldDays+'日':' 不明');document.getElementById('sScore').textContent=stars(totalScore)+' '+totalScore+'/5点';if(totalScore>=4){vd.classList.add('ok');icon.textContent='✅';label.textContent='推奨';reason.textContent='スコア '+totalScore+'/5（'+bandLabel+'）';}else if(totalScore>=2){vd.classList.add('warn');icon.textContent='⚠️';label.textContent='要検討';reason.textContent='スコア '+totalScore+'/5（'+bandLabel+'）';}else{vd.classList.add('ng');icon.textContent='❌';label.textContent='非推奨';reason.textContent='スコア '+totalScore+'/5（'+bandLabel+'）';document.getElementById('block1Area').style.display='none';document.getElementById('block2Area').style.display='none';document.getElementById('block3Area').style.display='none';document.getElementById('calcResult').style.display='block';document.getElementById('calcSaveBtn').style.display='block';document.querySelector('#calcModal .calc-body').scrollTo({top:99999,behavior:'smooth'});return;}showOutputBlocks(high,low,sellPrice,breakeven,listCount,rivalLow,profit,roi,okProfit,okROI,feeRate,ship,outs,totalCost,prefix);document.getElementById('calcResult').style.display='block';document.getElementById('calcSaveBtn').style.display='block';document.querySelector('#calcModal .calc-body').scrollTo({top:99999,behavior:'smooth'});}
+function showOutputBlocks(high,low,sellPrice,breakeven,listCount,rivalLow,profit,roi,okProfit,okROI,feeRate,ship,outs,totalCost,prefix){var pattern;if(rivalLow<=0||listCount<=0){pattern=0;}else if(rivalLow>=sellPrice){pattern='A';}else if(rivalLow>=sellPrice*0.8){pattern='B';}else{pattern='C';}var startPrice=high,targetPrice=sellPrice,effectiveProfit=profit,effectiveROI=roi;if(pattern==='B'){startPrice=rivalLow;targetPrice=breakeven;var bFee=Math.floor(low*feeRate/100);var bIncome=low-bFee-ship-outs;effectiveProfit=bIncome-totalCost;effectiveROI=totalCost>0?(effectiveProfit/totalCost*100):0;var vd=document.getElementById('cVerdict');var icon=document.getElementById('cVIcon');var label=document.getElementById('cVLabel');var reason=document.getElementById('cVReason');vd.className='verdict2';if(effectiveProfit<okProfit||effectiveROI<okROI){vd.classList.add('ng');icon.textContent='❌';label.textContent='非推奨（ライバル追従後）';reason.textContent='安値着地で利益基準未達（純利益'+(effectiveProfit>=0?'+':'')+effectiveProfit.toLocaleString('ja-JP')+'円）';}else{reason.textContent+='　※ライバル追従後利益:'+(effectiveProfit>=0?'+':'')+effectiveProfit.toLocaleString('ja-JP')+'円';}var bDisplayFee=Math.floor(startPrice*feeRate/100);var bIncome2=startPrice-bDisplayFee-ship-outs;effectiveProfit=bIncome2-totalCost;effectiveROI=totalCost>0?(effectiveProfit/totalCost*100):0;document.getElementById('rSP').textContent=fmt(startPrice);document.getElementById('rFF').textContent='- '+fmt(bDisplayFee)+'（'+feeRate+'%）';var bPrEl=document.getElementById('rPR');bPrEl.textContent=(effectiveProfit>=0?'+':'')+fmt(effectiveProfit);bPrEl.className='bv '+(effectiveProfit>=0?'pos':'neg');document.getElementById('rROI').textContent=effectiveROI.toFixed(1)+'%';document.getElementById('rROI').className='bv '+(effectiveROI>=0?'pos':'neg');setRoiBar(effectiveROI);}if(pattern==='C'){var cDisplayFee=Math.floor(startPrice*feeRate/100);var cIncome=startPrice-cDisplayFee-ship-outs;var cProfit=cIncome-totalCost;var cROI=totalCost>0?(cProfit/totalCost*100):0;document.getElementById('rSP').textContent=fmt(startPrice);document.getElementById('rFF').textContent='- '+fmt(cDisplayFee)+'（'+feeRate+'%）';var cPrEl=document.getElementById('rPR');cPrEl.textContent=(cProfit>=0?'+':'')+fmt(cProfit);cPrEl.className='bv '+(cProfit>=0?'pos':'neg');document.getElementById('rROI').textContent=cROI.toFixed(1)+'%';document.getElementById('rROI').className='bv '+(cROI>=0?'pos':'neg');setRoiBar(cROI);}var b1='新しい順、売り切れ、目立った傷や汚れなしで検索の結果、同商品が'+low.toLocaleString('ja-JP')+'円～'+high.toLocaleString('ja-JP')+'円の相場で売れている。最低でも'+low.toLocaleString('ja-JP')+'円では売れると考えられる事から'+sellPrice.toLocaleString('ja-JP')+'円で売れると見込まれる。';if(pattern===0){b1+='\n現在、同商品のライバルは不在のため、'+startPrice.toLocaleString('ja-JP')+'円からスタートして、';}else if(pattern==='A'){b1+='\n新しい順、販売中、目立った傷や汚れなしの同商品のライバルが'+listCount+'件、そのうち最安が'+rivalLow.toLocaleString('ja-JP')+'円だから、'+startPrice.toLocaleString('ja-JP')+'円からスタートして、';}else if(pattern==='B'){b1+='\n現在、同商品の強力なライバル（プロ）が'+listCount+'件、最安'+rivalLow.toLocaleString('ja-JP')+'円で出品中。この価格帯は強敵となるため相場に追従し、ライバルと同額の'+startPrice.toLocaleString('ja-JP')+'円からスタート。ページ作りの質と毎日の上位表示（300円値下げ）で確実に競り勝つ戦略をとる。損益分岐点（'+breakeven.toLocaleString('ja-JP')+'円）まで値下げを継続する。';}else if(pattern==='C'){b1+='\n現在、'+rivalLow.toLocaleString('ja-JP')+'円の異常安値（素人）の出品があるが、相場乖離が激しいため競合と見なさない。売り切れを待ち、本来の相場を目指すため強気の'+startPrice.toLocaleString('ja-JP')+'円からスタートして、';}document.getElementById('block1Text').textContent=b1;document.getElementById('block1Area').style.display='block';var startPrice80=Math.floor((startPrice-80)/100)*100+80;if(startPrice80>startPrice)startPrice80-=100;var b2=buildSchedule(startPrice80,targetPrice,300);if(pattern==='C'){if(rivalLow<breakeven){var vd2=document.getElementById('cVerdict');vd2.className='verdict2 warn';document.getElementById('cVIcon').textContent='⚠️';document.getElementById('cVLabel').textContent='要検討（異常安値リスク）';document.getElementById('cVReason').textContent='異常安値（'+rivalLow.toLocaleString('ja-JP')+'円）が損益分岐点（'+breakeven.toLocaleString('ja-JP')+'円）を下回っています。赤字リスクあり。';}var planBCur=targetPrice,planBDay=0;var lastDay=(b2.match(/最終(\d+)日後/)||['','0'])[1];planBDay=parseInt(lastDay)||0;b2+='\n\n▼【プランB】異常安値に相場が引っ張られ、売れなかった場合の撤退戦▼\n※最悪想定として、損益分岐点に向けてさらに値下げを継続します。';while(planBCur>breakeven&&planBDay<365){planBDay++;var planBNext=planBCur-300;if(planBNext<=breakeven){b2+='\n最終'+planBDay+'日後に'+breakeven.toLocaleString('ja-JP')+'円（※これ以上は赤字確定のため再出品）';break;}b2+='\n〇+'+planBDay+'日後に'+planBNext.toLocaleString('ja-JP')+'円';planBCur=planBNext;}}document.getElementById('block2Text').textContent=b2;document.getElementById('block2Area').style.display='block';var mmdd=getTodayMMDD();document.getElementById('block3Text').textContent=prefix+'-'+mmdd+'-'+toK(startPrice)+'-'+toK(sellPrice)+'-'+toK(low)+'-'+toK(breakeven);document.getElementById('block3Area').style.display='block';}
+function resetCalc2(){['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom','cSoldCount','cListCount','cSoldDays','cRivalLow','cPrefix'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});document.getElementById('cSource').value='store';document.getElementById('onlineShippingRow').style.display='none';document.getElementById('cFeeSelect').value='10';document.getElementById('cSellShip').value='0';document.getElementById('cOutsource').value='0';document.getElementById('chkSeasonal').checked=false;document.getElementById('chkInstant').checked=false;document.getElementById('sellShipCustomRow').style.display='none';document.getElementById('outsourceCustomRow').style.display='none';document.getElementById('calcResult').style.display='none';document.getElementById('scoreArea').style.display='none';document.getElementById('block1Area').style.display='none';document.getElementById('block2Area').style.display='none';document.getElementById('block3Area').style.display='none';document.getElementById('cSellPreview').textContent='— 円';document.getElementById('calcSaveBtn').style.display='none';document.querySelector('#calcModal .calc-body').scrollTo({top:0,behavior:'smooth'});}
+switchTab('research');
+</script>
+</body>
+</html>
