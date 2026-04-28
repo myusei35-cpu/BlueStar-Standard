@@ -1,0 +1,262 @@
+// 1. スマホからの入力を即座にDBへ保存し、シートを自動更新する裏技（トリガー）関数
+function onEdit(e) {
+  if (!e || !e.range) return;
+  const sheet = e.range.getSheet();
+  
+  // Actionシート以外での編集は無視
+  if (sheet.getName() !== 'Action') return;
+
+  const col = e.range.getColumn();
+  const row = e.range.getRow();
+
+  // K列（11列目）が「❤いいね数」の入力欄。ここ以外の編集や、ヘッダー行は無視
+  if (col !== 11 || row <= 1) return;
+
+  const likes = e.value; // 入力されたいいね数
+  const id = sheet.getRange(row, 7).getValue(); // G列（7列目）にある管理IDを取得
+
+  if (!id) return;
+
+  const dbSheet = e.source.getSheetByName('DB');
+  const dbData = dbSheet.getRange("A:A").getValues();
+
+  // DBシートから同じ管理IDを探し出し、AF列（32列目）にいいね数をこっそり保存
+  for (let i = 1; i < dbData.length; i++) {
+    if (dbData[i][0] == id) {
+      dbSheet.getRange(i + 1, 32).setValue(likes);
+      break;
+    }
+  }
+
+  // 保存が完了したら、即座にActionシートを最新状態に再計算・リロードする
+  updateActionSheet();
+}
+
+// 2. メインのダッシュボード生成関数（全入れ替え用）
+function updateActionSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dbSheet = ss.getSheetByName('DB');
+  const actionSheet = ss.getSheetByName('Action');
+  
+  if (!dbSheet || !actionSheet) {
+    SpreadsheetApp.getUi().alert('エラー：「DB」または「Action」という名前のシートが見つかりません。');
+    return;
+  }
+  
+  const dbData = dbSheet.getDataRange().getValues();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); 
+  
+  // K列に「❤いいね数 (入力)」を追加
+  const actionData = [
+    ['画像', 'ブランド・商品名 (型番)', '本日の推奨アクション', '目標(ストッパー)', '相場URL', '経過日数', '管理ID', 'サイズ・状態', '保管場所', '出品日', '❤いいね数(入力)']
+  ];
+  
+  for (let i = 1; i < dbData.length; i++) {
+    const row = dbData[i];
+    const status = String(row[1] || "").replace(/\s+/g, "");
+    
+    if (status === "販売中" || status === "損切") {
+      const id = row[0]; // A列: 管理ID
+      const name = row[4]; // E列: ブランド・商品名
+      const modelNum = row[5]; // F列: 型番
+      const sizeStatus = row[6]; // G列: サイズ・状態
+      const cost = Number(row[7]) || 0; // H列: 仕入原価
+      const location = row[8]; // I列: 保管場所
+      const listDateStr = row[9]; // J列: 出品日
+      
+      const highPrice = Number(row[10]) || 0;     // K列: 想定高値
+      const lowPrice = Number(row[11]) || 0;      // L列: 想定安値
+      const breakEvenInDB = Number(row[12]) || 0; // M列: 損益分岐（第1の床）
+      const estShipping = Number(row[14]) || 0;   // O列: 想定送料
+      
+      const itemUrl = row[21];   // V列: 出品URL
+      const imageUrl = row[22];  // W列: 画像URL
+      const marketUrl = row[23]; // X列: 相場URL
+      
+      const likes = row[31] === "" ? "" : Number(row[31]); // AF列(32番目): いいね数（システムの記憶）
+      
+      // 【2段階ストッパーの設定】
+      // 第1の床：赤字絶対阻止ライン（DBのM列そのまま、または未入力時の計算）
+      const rawFirstFloor = Math.ceil((cost + 500 + estShipping) / 0.9);
+const firstFloorCalc = Math.floor(rawFirstFloor / 100) * 100 + 80 < rawFirstFloor
+  ? Math.floor(rawFirstFloor / 100) * 100 + 180
+  : Math.floor(rawFirstFloor / 100) * 100 + 80;
+const firstFloor = breakEvenInDB > 0 ? breakEvenInDB : firstFloorCalc;
+      
+      // 第2の床：限界処分ライン（原価ゼロ・経費のみ100%回収）
+      const rawDeadPrice = Math.ceil((770 + 500 + estShipping) / 0.9);
+const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
+  ? Math.floor(rawDeadPrice / 100) * 100 + 180
+  : Math.floor(rawDeadPrice / 100) * 100 + 80;
+      
+      let listDate = new Date(listDateStr);
+      let daysElapsed = 0;
+      let actionText = '';
+      let targetDisplay = '';
+      
+      if (listDateStr && !isNaN(listDate.getTime())) {
+        listDate.setHours(0, 0, 0, 0);
+        daysElapsed = Math.floor((today - listDate) / (1000 * 60 * 60 * 24));
+      } else {
+        actionText = '⚠️出品日が未入力またはエラー';
+      }
+      
+      // ▼ いいね数に応じた「自動変速ギア」の判定
+      let gearText = "";
+      if (likes === "") {
+        gearText = "【500円値下げ】(いいね未入力)";
+      } else if (likes >= 10) {
+        gearText = "🔥【100円値下げ】(チキンレース)";
+      } else if (likes >= 6) {
+        gearText = "💡【300円値下げ】(見込み客あり)";
+      } else {
+        gearText = "💧【500円値下げ】(注目度低)";
+      }
+      
+      if (actionText === '') {
+        // ==========================================
+        // フェーズ1：1〜27日目（第1の床・赤字ブロック）
+        // ==========================================
+        if (daysElapsed < 0) {
+          actionText = '出品日が未来です';
+          targetDisplay = '-';
+        } else if (daysElapsed === 14) {
+          actionText = '🚨14日経過！タイトルを変え【適正相場】で再出品';
+          targetDisplay = '適正相場へ';
+        } else if (daysElapsed <= 27) {
+          actionText = gearText; // いいね数に応じた値下げ指示
+          targetDisplay = '【第1の床】¥' + firstFloor.toLocaleString() + ' まで';
+          
+        // ==========================================
+        // フェーズ2：28日目以降（第1の床解除 → 限界処分へ）
+        // ==========================================
+        } else if (daysElapsed === 28) {
+          actionText = '🚨28日経過！タイトルを変え【安値相場】で再出品';
+          targetDisplay = '安値相場へ';
+        } else if (daysElapsed <= 31) {
+          actionText = '再出品直後：価格ステイ（いいね待機）';
+          targetDisplay = 'ステイ';
+        } else {
+          // 32日目以降は、いいねに関わらず売り切り最優先のギア
+          actionText = '💀最終処分：' + gearText; 
+          targetDisplay = '【限界床】¥' + secondFloor.toLocaleString() + ' まで';
+        }
+      }
+      
+      const imageFormula = imageUrl ? `=IMAGE("${imageUrl}")` : '画像なし';
+      const marketLink = marketUrl ? `=HYPERLINK("${marketUrl}", "📈相場確認")` : 'URLなし';
+      
+      // 商品名と型番の合体
+      let displayTitle = name;
+      if (modelNum) {
+        displayTitle = name + " / 型番:" + modelNum;
+      }
+      const nameWithLink = itemUrl ? `=HYPERLINK("${itemUrl}", "${displayTitle}")` : displayTitle;
+      
+      actionData.push([imageFormula, nameWithLink, actionText, targetDisplay, marketLink, daysElapsed, id, sizeStatus, location, listDateStr, likes]);
+    }
+  }
+  
+  actionSheet.clear();
+  actionSheet.setFrozenRows(0);
+  actionSheet.setFrozenColumns(0);
+  
+  if (actionData.length > 1) {
+    actionSheet.getRange(1, 1, actionData.length, actionData[0].length).setValues(actionData);
+    
+    // UIレイアウト（スマホ最適化済み）
+    actionSheet.setRowHeights(2, actionData.length - 1, 110);
+    actionSheet.setColumnWidth(1, 100); // 画像
+    actionSheet.setColumnWidth(2, 100); // 商品名
+    actionSheet.setColumnWidth(3, 160); // アクション（ギア表示のため少し拡大）
+    actionSheet.setColumnWidth(4, 120); // 目標ストッパー
+    actionSheet.setColumnWidth(5, 70);  // 相場URL
+    actionSheet.setColumnWidth(6, 60);  // 経過日数
+    actionSheet.setColumnWidth(7, 80);  // 管理ID
+    actionSheet.setColumnWidth(8, 100); // サイズ・状態
+    actionSheet.setColumnWidth(9, 80);  // 保管場所
+    actionSheet.setColumnWidth(10, 80); // 出品日
+    actionSheet.setColumnWidth(11, 80); // ❤いいね入力（新設）
+    
+    // いいね入力列（K列）を目立たせる背景色設定
+    actionSheet.getRange(2, 11, actionData.length - 1, 1).setBackground('#fff2cc'); 
+    
+    actionSheet.getRange(1, 1, actionData.length, actionData[0].length)
+      .setWrap(true)
+      .setVerticalAlignment('middle');
+      
+    actionSheet.getRange(1, 1, 1, actionData[0].length)
+      .setBackground('#cc0000')
+      .setFontColor('white')
+      .setFontWeight('bold');
+      
+    actionSheet.setFrozenRows(1);
+    actionSheet.setFrozenColumns(1);
+      
+  } else {
+    actionSheet.getRange('A1').setValue('現在「販売中」または「損切」の商品はありません。');
+  }
+}
+
+// WebApp用：拡張機能からIDで商品情報を取得
+function doGet(e) {
+  const token = e.parameter.token;
+  const id = e.parameter.id;
+  
+  // トークン認証（自分で決めた文字列に変更してください）
+  if (token !== 'bluestar2026') {
+    return ContentService.createTextOutput(
+      JSON.stringify({ error: 'unauthorized' })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (!id) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ error: 'no id' })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dbSheet = ss.getSheetByName('DB');
+  const dbData = dbSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < dbData.length; i++) {
+    const row = dbData[i];
+    if (String(row[0]).trim() === String(id).trim()) {
+      const cost = Number(row[7]) || 0;        // H列：仕入原価
+      const estShipping = Number(row[14]) || 0; // O列：想定送料
+      const breakEvenInDB = Number(row[12]) || 0; // M列：損益分岐
+      
+      const firstFloor = breakEvenInDB > 0
+        ? breakEvenInDB
+        : Math.ceil((cost + 500 + estShipping) / 0.9);
+      
+      const rawDeadPrice = Math.ceil((770 + 500 + estShipping) / 0.9);
+const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
+  ? Math.floor(rawDeadPrice / 100) * 100 + 180
+  : Math.floor(rawDeadPrice / 100) * 100 + 80;
+      
+      const result = {
+        id: row[0],
+        name: row[4],
+        status: String(row[1] || "").replace(/\s+/g, ""),
+        cost: cost,
+        firstFloor: firstFloor,
+        secondFloor: secondFloor,
+        sellPrice: Number(row[13]) || 0,  // N列：売れる価格
+        lowPrice: Number(row[11]) || 0,   // L列：想定安値
+        listDate: row[9] ? String(row[9]) : '',
+        likes: row[31] === '' ? '' : Number(row[31])
+      };
+      
+      return ContentService.createTextOutput(
+        JSON.stringify(result)
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  
+  return ContentService.createTextOutput(
+    JSON.stringify({ error: 'not found' })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
