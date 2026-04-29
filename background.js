@@ -1,3 +1,4 @@
+// ===== STABLE =====
 // タブIDを返す＆Google検索タブを開く
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "GET_TAB_ID") {
@@ -86,7 +87,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }).catch(() => {});
   }, 2000);
 });
+// ===== /STABLE =====
 
+// ===== STABLE =====
 // PATCH: 型番・価格抽出 タブ制御
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type !== 'FETCH_ITEM_DETAIL') return false;
@@ -143,3 +146,4 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   return true;
 });
+// ===== /STABLE =====
