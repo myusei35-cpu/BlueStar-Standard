@@ -774,6 +774,8 @@
     // すでに注入済みならスキップ
     if (document.querySelector("[data-sniper-lens-btn]")) return;
 
+  const candidates = [];
+
     const links = [...document.querySelectorAll("a[href*='mercari.com']")];
     if (links.length === 0) return;
 
@@ -794,6 +796,18 @@
       const raw = clean(titleEl?.textContent || "");
       const keyword = cleanLensTitle(raw);
       if (!keyword) return;
+
+      // サムネイル取得
+      const imgEl = link.querySelector("img") ||
+        link.closest("[data-hveid]")?.querySelector("img") ||
+        link.parentElement?.querySelector("img") ||
+        link.closest("div")?.querySelector("img");
+      const imgUrl = imgEl?.src || imgEl?.dataset?.src || "";
+
+      // 候補リストに追加（上位10件まで）
+      if (candidates.length < 10) {
+        candidates.push({ title: keyword, imgUrl, mercariUrl: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(keyword) });
+      }
 
       const btn = document.createElement("a");
       btn.href = "#";
@@ -820,7 +834,36 @@
       }
     });
 
-    if (injected > 0) showToast(injected + "件にアプリ起動ボタンを追加しました", 2000);
+    // 候補をchrome.storage.localに一時保存
+    if (candidates.length > 0) {
+      chrome.storage.local.set({
+        bluestar_lens_candidates: candidates
+      });
+    }
+
+    if (injected > 0) showToast(
+      injected + "件にアプリ起動ボタンを追加しました", 2000
+    );
+
+    // 候補保存後に仕入れ管理ボタンを注入
+    if (candidates.length > 0 && !document.getElementById("__sniper_inventory_btn__")) {
+      const invBtn = document.createElement("div");
+      invBtn.id = "__sniper_inventory_btn__";
+      invBtn.textContent = "📦 仕入れ管理を開く";
+      invBtn.style.cssText =
+        "position:fixed;bottom:140px;right:12px;z-index:2147483647;" +
+        "background:#7c3aed;color:#fff;border-radius:12px;" +
+        "padding:10px 16px;font-size:13px;font-weight:800;" +
+        "font-family:system-ui,sans-serif;cursor:pointer;" +
+        "box-shadow:0 4px 16px rgba(124,58,237,0.5);";
+      invBtn.onclick = () => {
+        window.open(
+          "https://myusei35-cpu.github.io/BlueStar-Standard/inventory.html",
+          "_blank"
+        );
+      };
+      document.body.appendChild(invBtn);
+    }
   }
 
   /* =========================================================
