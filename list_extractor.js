@@ -1183,7 +1183,7 @@
       const startPage = parseInt(currentUrl.searchParams.get("page") || "1");
 
       const allCandidates = [];
-      const GAS_URL = "YOUR_API_KEY";
+      const GAS_URL = "https://script.google.com/macros/s/AKfycbyyuKEhbHKBX8ux341SU3uFIpTr7-6BS-TM_v0UcqaB1HYc2f-VNqp2TziZjIRyaIt_/exec";
 
       for (let p = startPage; p < startPage + totalPages; p++) {
         btn.innerHTML = `⏳ ${p - startPage + 1}/${totalPages}ページ取得中... 計${allCandidates.length}件`;
@@ -2217,7 +2217,7 @@
 // -------------------------------------------------------
   // PATCH: Shops管理ページ 価格改定ツール
   // -------------------------------------------------------
-  const SHOPS_ADMIN_GAS_URL = "YOUR_API_KEY";
+  const SHOPS_ADMIN_GAS_URL = "https://script.google.com/macros/s/AKfycbwNzHECR_JeekOHd5pzgeDRl_SWshcNQSotSia1u0oYDzlAJllOwtUty5p4JSqtD6TM/exec";
   const SHOPS_ADMIN_TOKEN = "bluestar2026";
 
   function isShopsAdminPage() {
@@ -2319,7 +2319,7 @@
     return await res.json();
   }
 
-  async function executePriceChange(editUrl, newPrice) {
+  async function executePriceChange(editUrl, newPrice, manageId) {
     if (!confirm(`⏳ ¥${newPrice.toLocaleString()} に値下げします。よろしいですか？`)) return;
     const productIdMatch = editUrl.match(/\/products\/([^\/]+)\/edit/);
     if (!productIdMatch) {
@@ -2354,6 +2354,20 @@
         pressedBtn.textContent = `✅ ¥${newPrice.toLocaleString()} に変更済み`;
         pressedBtn.style.background = '#16a34a';
         pressedBtn.disabled = true;
+      }
+      // GASに変更日時を保存
+      if (manageId) {
+        const changedAt = new Date().toLocaleString('ja-JP');
+        fetch(SHOPS_ADMIN_GAS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            token: SHOPS_ADMIN_TOKEN,
+            id: manageId,
+            changedAt: changedAt
+          })
+        }).catch(() => {});
       }
       alert(`✅ ¥${newPrice.toLocaleString()} に値下げしました`);
 
@@ -2491,7 +2505,25 @@
         const isInvalidDate = !listDateObj || isNaN(listDateObj);
 
         const isActionable = statusText === "販売中" || statusText === "損切";
-        const action = isActionable && !isFutureDate && !isInvalidDate
+
+        // 24時間以内に変更済みかチェック
+        const changedAt = gasInfo.changedAt || '';
+        let isRecentlyChanged = false;
+        let changedAtDisplay = '';
+        if (changedAt) {
+          const changedDate = new Date(changedAt);
+          if (!isNaN(changedDate.getTime())) {
+            const diffHours = (now - changedDate) / (1000 * 60 * 60);
+            isRecentlyChanged = diffHours < 24;
+            const m = changedDate.getMonth() + 1;
+            const d = changedDate.getDate();
+            const hh = String(changedDate.getHours()).padStart(2, '0');
+            const mm = String(changedDate.getMinutes()).padStart(2, '0');
+            changedAtDisplay = `${m}/${d} ${hh}:${mm}`;
+          }
+        }
+
+        const action = isActionable && !isFutureDate && !isInvalidDate && !isRecentlyChanged
           ? calcAction(likesCount, daysElapsedFinal, firstFloor, secondFloor, currentPrice, statusText)
           : null;
 
@@ -2524,7 +2556,16 @@
           errDiv.style.cssText = "color:#f87171;font-size:10px;";
           errDiv.textContent = "⚠️ 出品日が未来です";
           btnWrap.appendChild(errDiv);
-        } else if (isActionable && action) {
+        
+          } else if (isActionable && isRecentlyChanged) {
+          const changedDiv = document.createElement("div");
+          changedDiv.style.cssText = "color:#4ade80;font-weight:700;";
+          changedDiv.textContent = `✅ ${changedAtDisplay} 変更済み（24時間ロック中）`;
+          btnWrap.appendChild(changedDiv);
+
+
+
+          } else if (isActionable && action) {
           // フェーズ判定
           if (daysElapsedFinal === 14) {
             const relistDiv = document.createElement("div");
@@ -2559,7 +2600,7 @@
             execBtn.onclick = (e) => {
               e.preventDefault();
               e.stopPropagation();
-              executePriceChange(editUrl, action.newPrice);
+              executePriceChange(editUrl, action.newPrice, manageId);
             };
             btnWrap.appendChild(execBtn);
 
@@ -2589,7 +2630,7 @@
           rivalBtn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const keyword = encodeURIComponent(title.replace(/[BM]\d{4}.*$/, "").trim());
+            const keyword = encodeURIComponent((gasInfo && gasInfo.name) ? gasInfo.name : title.replace(/[BM]\d{4}.*$/, "").trim());
             window.open(`https://jp.mercari.com/search?keyword=${keyword}&status=on_sale&order=price_asc`, "_blank");
           };
           btnRow.appendChild(rivalBtn);
@@ -2618,7 +2659,7 @@
               e.preventDefault();
               e.stopPropagation();
               const manualPrice = currentPrice - v;
-              executePriceChange(editUrl, manualPrice);
+              executePriceChange(editUrl, manualPrice, manageId);
             };
             manualWrap.appendChild(manualAmtBtn);
           });
@@ -3126,7 +3167,7 @@
   if (!location.href.includes('google.com/search') || !location.href.includes('lns')) return;
   if (document.getElementById('__bs_lens_btn__')) return;
 
-  const GAS_URL = 'YOUR_API_KEY';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKsZ0mXU1KxovmCgxzln7Sntga-YL1H_sJfNLbfwdsRZ-O5QbJI0qLlcd3PChtQzKc/exec';
 
   // ===== FROZEN =====
   function getMercariUrls() {
@@ -3188,7 +3229,8 @@
 
     for (let i = 0; i < urls.length; i++) {
       setStatus(`巡回中 ${i + 1}/${urls.length}...`, '#fbbf24');
-      chrome.runtime.sendMessage({ type: 'OPEN_TAB_BACKGROUND', url: urls[i] + '?bs_auto=1' });
+      window.open(urls[i], '_blank');
+      window.focus();
       await new Promise(r => setTimeout(r, 12000));
     }
 
@@ -3238,7 +3280,7 @@
   if (window.__bs_capture_done__) return;
   window.__bs_capture_done__ = true;
 
-  const GAS_URL = 'YOUR_API_KEY';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKsZ0mXU1KxovmCgxzln7Sntga-YL1H_sJfNLbfwdsRZ-O5QbJI0qLlcd3PChtQzKc/exec';
 
   // ===== FROZEN =====
   function showBadge(msg) {
