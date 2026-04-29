@@ -545,11 +545,13 @@ function showOutputBlocks(high,low,sellPrice,breakeven,listCount,rivalLow,profit
 function resetCalc2(){['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom','cSoldCount','cListCount','cSoldDays','cRivalLow','cPrefix'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});document.getElementById('cSource').value='store';document.getElementById('onlineShippingRow').style.display='none';document.getElementById('cFeeSelect').value='10';document.getElementById('cSellShip').value='0';document.getElementById('cOutsource').value='0';document.getElementById('chkSeasonal').checked=false;document.getElementById('chkInstant').checked=false;document.getElementById('sellShipCustomRow').style.display='none';document.getElementById('outsourceCustomRow').style.display='none';document.getElementById('calcResult').style.display='none';document.getElementById('scoreArea').style.display='none';document.getElementById('block1Area').style.display='none';document.getElementById('block2Area').style.display='none';document.getElementById('block3Area').style.display='none';document.getElementById('cSellPreview').textContent='— 円';document.getElementById('calcSaveBtn').style.display='none';document.querySelector('#calcModal .calc-body').scrollTo({top:0,behavior:'smooth'});}
 // ======= Lens候補選択UI ======= 
 function showLensCandidates() {
-  chrome.storage.local.get("bluestar_lens_candidates", (result) => {
-    const candidates = result.bluestar_lens_candidates;
-    if (!candidates || candidates.length === 0) return;
-    _buildCandidateUI(candidates);
-  });
+  chrome.runtime.sendMessage(
+    { type: "GET_LENS_CANDIDATES" },
+    (response) => {
+      if (!response || !response.candidates || response.candidates.length === 0) return;
+      _buildCandidateUI(response.candidates);
+    }
+  );
 }
 function _buildCandidateUI(candidates) {
 
@@ -598,7 +600,7 @@ const cancelBtn = document.createElement("button");
 cancelBtn.textContent = "✕ キャンセル";
 cancelBtn.style.cssText = "width:100%;margin-top:8px;background:transparent;color:#64748b;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px;font-size:0.8em;cursor:pointer;";
 cancelBtn.onclick = () => {
-    chrome.storage.local.remove("bluestar_lens_candidates");
+    chrome.runtime.sendMessage({ type: "CLEAR_LENS_CANDIDATES" });
     wrap.remove();
   };
 wrap.appendChild(cancelBtn);
@@ -627,7 +629,7 @@ _openResearchForm(c.title);
 currentImgData = null;
 _openResearchForm(c.title);
 }
-chrome.storage.local.remove("bluestar_lens_candidates");
+chrome.runtime.sendMessage({ type: "CLEAR_LENS_CANDIDATES" });
   document.getElementById("lens-candidates-ui")?.remove();
 }
   
