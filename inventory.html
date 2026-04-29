@@ -545,14 +545,13 @@ function showOutputBlocks(high,low,sellPrice,breakeven,listCount,rivalLow,profit
 function resetCalc2(){['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom','cSoldCount','cListCount','cSoldDays','cRivalLow','cPrefix'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});document.getElementById('cSource').value='store';document.getElementById('onlineShippingRow').style.display='none';document.getElementById('cFeeSelect').value='10';document.getElementById('cSellShip').value='0';document.getElementById('cOutsource').value='0';document.getElementById('chkSeasonal').checked=false;document.getElementById('chkInstant').checked=false;document.getElementById('sellShipCustomRow').style.display='none';document.getElementById('outsourceCustomRow').style.display='none';document.getElementById('calcResult').style.display='none';document.getElementById('scoreArea').style.display='none';document.getElementById('block1Area').style.display='none';document.getElementById('block2Area').style.display='none';document.getElementById('block3Area').style.display='none';document.getElementById('cSellPreview').textContent='— 円';document.getElementById('calcSaveBtn').style.display='none';document.querySelector('#calcModal .calc-body').scrollTo({top:0,behavior:'smooth'});}
 // ======= Lens候補選択UI ======= 
 function showLensCandidates() {
-  chrome.runtime.sendMessage(
-    "ejkkncgdahgldkmlodeaepmdhjandnmp",
-    { type: "GET_LENS_CANDIDATES" },
-    (response) => {
-      if (!response || !response.candidates || response.candidates.length === 0) return;
-      _buildCandidateUI(response.candidates);
-    }
-  );
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get("lens");
+  if (!raw) return;
+  let candidates;
+  try { candidates = JSON.parse(decodeURIComponent(raw)); } catch { return; }
+  if (!candidates || candidates.length === 0) return;
+  _buildCandidateUI(candidates);
 }
 function _buildCandidateUI(candidates) {
 
