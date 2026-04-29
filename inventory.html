@@ -546,6 +546,7 @@ function resetCalc2(){['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOut
 // ======= Lens候補選択UI ======= 
 function showLensCandidates() {
   chrome.runtime.sendMessage(
+    "ejkkncgdahgldkmlodeaepmdhjandnmp",
     { type: "GET_LENS_CANDIDATES" },
     (response) => {
       if (!response || !response.candidates || response.candidates.length === 0) return;
