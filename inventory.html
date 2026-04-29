@@ -543,7 +543,102 @@ function toK(n){return Math.ceil(n/1000);}
 function runCalc(){var cost=parseFloat(document.getElementById('cCost').value)||0;var high=parseFloat(document.getElementById('cHigh').value)||0;var low=parseFloat(document.getElementById('cLow').value)||0;var shipV=document.getElementById('cSellShip').value;var ship=shipV==='custom'?(parseFloat(document.getElementById('cSellShipCustom').value)||0):parseFloat(shipV)||0;var outsV=document.getElementById('cOutsource').value;var outs=outsV==='custom'?(parseFloat(document.getElementById('cOutsourceCustom').value)||0):parseFloat(outsV)||0;var isOnline=document.getElementById('cSource').value==='online';var buyShip=isOnline?(parseFloat(document.getElementById('cBuyShip').value)||0):0;var feeRate=parseFloat(document.getElementById('cFeeSelect').value)||10;var soldCount=parseInt(document.getElementById('cSoldCount').value)||0;var listCount=parseInt(document.getElementById('cListCount').value)||0;var soldDays=parseInt(document.getElementById('cSoldDays').value)||0;var rivalLow=parseFloat(document.getElementById('cRivalLow').value)||0;var prefix=document.getElementById('cPrefix').value.trim()||'B';var isSeasonal=document.getElementById('chkSeasonal').checked;var isInstant=document.getElementById('chkInstant').checked;if(cost===0){alert('仕入れ値を入力してください');return;}if(high===0&&low===0){alert('高値・安値を入力してください');return;}var sellPrice=round100((high+low)/2*0.98);var fee=Math.floor(sellPrice*feeRate/100);var income=sellPrice-fee-ship-outs;var totalCost=cost+buyShip;var profit=income-totalCost;var roi=totalCost>0?(profit/totalCost*100):0;var breakeven=Math.ceil((totalCost+ship+outs)/(1-feeRate/100));var worstSell=round100(low*0.98);var worstFee=Math.floor(worstSell*feeRate/100);var worstIncome=worstSell-worstFee-ship-outs;var worstProfit=worstIncome-totalCost;document.getElementById('rSP').textContent=fmt(sellPrice);document.getElementById('rCC').textContent='- '+fmt(cost);document.getElementById('rBS').textContent=buyShip>0?'- '+fmt(buyShip):'—';document.getElementById('rFF').textContent='- '+fmt(fee)+'（'+feeRate+'%）';document.getElementById('rSS').textContent=ship>0?'- '+fmt(ship):'—';document.getElementById('rOU').textContent=outs>0?'- '+fmt(outs):'—';var prEl=document.getElementById('rPR');prEl.textContent=(profit>=0?'+':'')+fmt(profit);prEl.className='bv '+(profit>=0?'pos':'neg');document.getElementById('rROI').textContent=roi.toFixed(1)+'%';document.getElementById('rROI').className='bv '+(roi>=0?'pos':'neg');setRoiBar(roi);document.getElementById('rWorst').textContent=(worstProfit>=0?'+':'')+fmt(worstProfit);document.getElementById('rWorst').className='bv '+(worstProfit>=0?'pos':'neg');document.getElementById('rNet').textContent=fmt(income);var okProfit,okROI,bandLabel;if(cost<4000){okProfit=1500;okROI=50;bandLabel='0〜3,999円帯';}else if(cost<8000){okProfit=2000;okROI=35;bandLabel='4,000〜7,999円帯';}else if(cost<15000){okProfit=3000;okROI=30;bandLabel='8,000〜14,999円帯';}else{okProfit=5000;okROI=25;bandLabel='15,000円以上帯';}var vd=document.getElementById('cVerdict');var icon=document.getElementById('cVIcon');var label=document.getElementById('cVLabel');var reason=document.getElementById('cVReason');vd.className='verdict2';if(profit<okProfit||roi<okROI){vd.classList.add('ng');icon.textContent='❌';label.textContent='非推奨';reason.textContent='利益・ROI基準未達（'+bandLabel+'）純利益基準:'+fmt(okProfit)+' / ROI基準:'+okROI+'%';document.getElementById('scoreArea').style.display='none';document.getElementById('block1Area').style.display='none';document.getElementById('block2Area').style.display='none';document.getElementById('block3Area').style.display='none';document.getElementById('calcResult').style.display='block';document.getElementById('calcSaveBtn').style.display='block';document.querySelector('#calcModal .calc-body').scrollTo({top:99999,behavior:'smooth'});return;}var hasOptional=(soldCount>0||listCount>0||soldDays>0||isSeasonal||isInstant);if(!hasOptional){vd.classList.add('warn');icon.textContent='⚠️';label.textContent='簡易判定クリア';reason.textContent='STEP1通過（'+bandLabel+'）詳細判定は未実施';document.getElementById('scoreArea').style.display='none';document.getElementById('calcResult').style.display='block';showOutputBlocks(high,low,sellPrice,breakeven,listCount,rivalLow,profit,roi,okProfit,okROI,feeRate,ship,outs,totalCost,prefix);document.getElementById('calcSaveBtn').style.display='block';document.querySelector('#calcModal .calc-body').scrollTo({top:99999,behavior:'smooth'});return;}var sc1=soldDays>0&&soldDays<=10?1:0;var sc2=(soldCount>0&&(soldCount+listCount)>0)?((soldCount/(soldCount+listCount))>=0.3?1:0):0;var sc3=listCount<=15?1:0;var sc4=worstProfit>=0?1:0;var sc5=soldCount===1?0:1;var totalScore=sc1+sc2+sc3+sc4+sc5;var penalty=0,bonus=0,penaltyApplied=false;if(isSeasonal&&listCount>=soldCount&&soldCount>0){if(soldCount>=listCount*2){penaltyApplied=false;}else{penalty=-2;penaltyApplied=true;}}if(isInstant)bonus=1;totalScore=Math.min(5,totalScore+penalty+bonus);document.getElementById('scoreArea').style.display='block';var dot=function(n){return n?'✅ +1':'❌ 0';};document.getElementById('s1').textContent=soldDays>0?dot(sc1)+'（'+soldDays+'日）':'— 未入力';document.getElementById('s2').textContent=(soldCount>0||listCount>0)?dot(sc2):'— 未入力';document.getElementById('s3').textContent=dot(sc3)+'（出品'+listCount+'件）';document.getElementById('s4').textContent=dot(sc4)+'（最悪'+(worstProfit>=0?'+':'')+fmt(worstProfit)+'）';document.getElementById('s5').textContent=dot(sc5);if(penaltyApplied){document.getElementById('sPenaltyRow').style.display='flex';document.getElementById('sPenalty').textContent='-2点（⏳過去データ×在庫リスク）';}else{document.getElementById('sPenaltyRow').style.display='none';}if(isInstant){document.getElementById('sBonusRow').style.display='flex';document.getElementById('sBonus').textContent='+1点（🔥即売れ）';}else{document.getElementById('sBonusRow').style.display='none';}var roiStar=roi>=60?5:roi>=40?4:roi>=30?3:roi>=20?2:1;var speedStar=soldDays===0?1:soldDays<=3?5:soldDays<=7?4:soldDays<=14?3:soldDays<=30?2:1;document.getElementById('sROI').textContent=stars(roiStar)+' ROI '+roi.toFixed(1)+'%';document.getElementById('sSpeed').textContent=stars(speedStar)+(soldDays>0?' '+soldDays+'日':' 不明');document.getElementById('sScore').textContent=stars(totalScore)+' '+totalScore+'/5点';if(totalScore>=4){vd.classList.add('ok');icon.textContent='✅';label.textContent='推奨';reason.textContent='スコア '+totalScore+'/5（'+bandLabel+'）';}else if(totalScore>=2){vd.classList.add('warn');icon.textContent='⚠️';label.textContent='要検討';reason.textContent='スコア '+totalScore+'/5（'+bandLabel+'）';}else{vd.classList.add('ng');icon.textContent='❌';label.textContent='非推奨';reason.textContent='スコア '+totalScore+'/5（'+bandLabel+'）';document.getElementById('block1Area').style.display='none';document.getElementById('block2Area').style.display='none';document.getElementById('block3Area').style.display='none';document.getElementById('calcResult').style.display='block';document.getElementById('calcSaveBtn').style.display='block';document.querySelector('#calcModal .calc-body').scrollTo({top:99999,behavior:'smooth'});return;}showOutputBlocks(high,low,sellPrice,breakeven,listCount,rivalLow,profit,roi,okProfit,okROI,feeRate,ship,outs,totalCost,prefix);document.getElementById('calcResult').style.display='block';document.getElementById('calcSaveBtn').style.display='block';document.querySelector('#calcModal .calc-body').scrollTo({top:99999,behavior:'smooth'});}
 function showOutputBlocks(high,low,sellPrice,breakeven,listCount,rivalLow,profit,roi,okProfit,okROI,feeRate,ship,outs,totalCost,prefix){var pattern;if(rivalLow<=0||listCount<=0){pattern=0;}else if(rivalLow>=sellPrice){pattern='A';}else if(rivalLow>=sellPrice*0.8){pattern='B';}else{pattern='C';}var startPrice=high,targetPrice=sellPrice,effectiveProfit=profit,effectiveROI=roi;if(pattern==='B'){startPrice=rivalLow;targetPrice=breakeven;var bFee=Math.floor(low*feeRate/100);var bIncome=low-bFee-ship-outs;effectiveProfit=bIncome-totalCost;effectiveROI=totalCost>0?(effectiveProfit/totalCost*100):0;var vd=document.getElementById('cVerdict');var icon=document.getElementById('cVIcon');var label=document.getElementById('cVLabel');var reason=document.getElementById('cVReason');vd.className='verdict2';if(effectiveProfit<okProfit||effectiveROI<okROI){vd.classList.add('ng');icon.textContent='❌';label.textContent='非推奨（ライバル追従後）';reason.textContent='安値着地で利益基準未達（純利益'+(effectiveProfit>=0?'+':'')+effectiveProfit.toLocaleString('ja-JP')+'円）';}else{reason.textContent+='　※ライバル追従後利益:'+(effectiveProfit>=0?'+':'')+effectiveProfit.toLocaleString('ja-JP')+'円';}var bDisplayFee=Math.floor(startPrice*feeRate/100);var bIncome2=startPrice-bDisplayFee-ship-outs;effectiveProfit=bIncome2-totalCost;effectiveROI=totalCost>0?(effectiveProfit/totalCost*100):0;document.getElementById('rSP').textContent=fmt(startPrice);document.getElementById('rFF').textContent='- '+fmt(bDisplayFee)+'（'+feeRate+'%）';var bPrEl=document.getElementById('rPR');bPrEl.textContent=(effectiveProfit>=0?'+':'')+fmt(effectiveProfit);bPrEl.className='bv '+(effectiveProfit>=0?'pos':'neg');document.getElementById('rROI').textContent=effectiveROI.toFixed(1)+'%';document.getElementById('rROI').className='bv '+(effectiveROI>=0?'pos':'neg');setRoiBar(effectiveROI);}if(pattern==='C'){var cDisplayFee=Math.floor(startPrice*feeRate/100);var cIncome=startPrice-cDisplayFee-ship-outs;var cProfit=cIncome-totalCost;var cROI=totalCost>0?(cProfit/totalCost*100):0;document.getElementById('rSP').textContent=fmt(startPrice);document.getElementById('rFF').textContent='- '+fmt(cDisplayFee)+'（'+feeRate+'%）';var cPrEl=document.getElementById('rPR');cPrEl.textContent=(cProfit>=0?'+':'')+fmt(cProfit);cPrEl.className='bv '+(cProfit>=0?'pos':'neg');document.getElementById('rROI').textContent=cROI.toFixed(1)+'%';document.getElementById('rROI').className='bv '+(cROI>=0?'pos':'neg');setRoiBar(cROI);}var b1='新しい順、売り切れ、目立った傷や汚れなしで検索の結果、同商品が'+low.toLocaleString('ja-JP')+'円～'+high.toLocaleString('ja-JP')+'円の相場で売れている。最低でも'+low.toLocaleString('ja-JP')+'円では売れると考えられる事から'+sellPrice.toLocaleString('ja-JP')+'円で売れると見込まれる。';if(pattern===0){b1+='\n現在、同商品のライバルは不在のため、'+startPrice.toLocaleString('ja-JP')+'円からスタートして、';}else if(pattern==='A'){b1+='\n新しい順、販売中、目立った傷や汚れなしの同商品のライバルが'+listCount+'件、そのうち最安が'+rivalLow.toLocaleString('ja-JP')+'円だから、'+startPrice.toLocaleString('ja-JP')+'円からスタートして、';}else if(pattern==='B'){b1+='\n現在、同商品の強力なライバル（プロ）が'+listCount+'件、最安'+rivalLow.toLocaleString('ja-JP')+'円で出品中。この価格帯は強敵となるため相場に追従し、ライバルと同額の'+startPrice.toLocaleString('ja-JP')+'円からスタート。ページ作りの質と毎日の上位表示（300円値下げ）で確実に競り勝つ戦略をとる。損益分岐点（'+breakeven.toLocaleString('ja-JP')+'円）まで値下げを継続する。';}else if(pattern==='C'){b1+='\n現在、'+rivalLow.toLocaleString('ja-JP')+'円の異常安値（素人）の出品があるが、相場乖離が激しいため競合と見なさない。売り切れを待ち、本来の相場を目指すため強気の'+startPrice.toLocaleString('ja-JP')+'円からスタートして、';}document.getElementById('block1Text').textContent=b1;document.getElementById('block1Area').style.display='block';var startPrice80=Math.floor((startPrice-80)/100)*100+80;if(startPrice80>startPrice)startPrice80-=100;var b2=buildSchedule(startPrice80,targetPrice,300);if(pattern==='C'){if(rivalLow<breakeven){var vd2=document.getElementById('cVerdict');vd2.className='verdict2 warn';document.getElementById('cVIcon').textContent='⚠️';document.getElementById('cVLabel').textContent='要検討（異常安値リスク）';document.getElementById('cVReason').textContent='異常安値（'+rivalLow.toLocaleString('ja-JP')+'円）が損益分岐点（'+breakeven.toLocaleString('ja-JP')+'円）を下回っています。赤字リスクあり。';}var planBCur=targetPrice,planBDay=0;var lastDay=(b2.match(/最終(\d+)日後/)||['','0'])[1];planBDay=parseInt(lastDay)||0;b2+='\n\n▼【プランB】異常安値に相場が引っ張られ、売れなかった場合の撤退戦▼\n※最悪想定として、損益分岐点に向けてさらに値下げを継続します。';while(planBCur>breakeven&&planBDay<365){planBDay++;var planBNext=planBCur-300;if(planBNext<=breakeven){b2+='\n最終'+planBDay+'日後に'+breakeven.toLocaleString('ja-JP')+'円（※これ以上は赤字確定のため再出品）';break;}b2+='\n〇+'+planBDay+'日後に'+planBNext.toLocaleString('ja-JP')+'円';planBCur=planBNext;}}document.getElementById('block2Text').textContent=b2;document.getElementById('block2Area').style.display='block';var mmdd=getTodayMMDD();document.getElementById('block3Text').textContent=prefix+'-'+mmdd+'-'+toK(startPrice)+'-'+toK(sellPrice)+'-'+toK(low)+'-'+toK(breakeven);document.getElementById('block3Area').style.display='block';}
 function resetCalc2(){['cCost','cBuyShip','cHigh','cLow','cSellShipCustom','cOutsourceCustom','cSoldCount','cListCount','cSoldDays','cRivalLow','cPrefix'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});document.getElementById('cSource').value='store';document.getElementById('onlineShippingRow').style.display='none';document.getElementById('cFeeSelect').value='10';document.getElementById('cSellShip').value='0';document.getElementById('cOutsource').value='0';document.getElementById('chkSeasonal').checked=false;document.getElementById('chkInstant').checked=false;document.getElementById('sellShipCustomRow').style.display='none';document.getElementById('outsourceCustomRow').style.display='none';document.getElementById('calcResult').style.display='none';document.getElementById('scoreArea').style.display='none';document.getElementById('block1Area').style.display='none';document.getElementById('block2Area').style.display='none';document.getElementById('block3Area').style.display='none';document.getElementById('cSellPreview').textContent='— 円';document.getElementById('calcSaveBtn').style.display='none';document.querySelector('#calcModal .calc-body').scrollTo({top:0,behavior:'smooth'});}
+// ======= Lens候補選択UI ======= 
+function showLensCandidates() {
+const raw = localStorage.getItem("bluestar_lens_candidates");
+if (!raw) return;
+let candidates;
+try { candidates = JSON.parse(raw); } catch { return; } 
+if (!candidates || candidates.length === 0) return;
+
+const existing = document.getElementById("lens-candidates-ui");
+if (existing) existing.remove();
+
+const wrap = document.createElement("div");
+wrap.id = "lens-candidates-ui";
+wrap.style.cssText = "background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:12px;margin-bottom:12px;";
+
+const label = document.createElement("div");
+label.textContent = "📸 Lens候補 — 1件選んでください";
+label.style.cssText = "font-size:0.75em;font-weight:700;color:#7c3aed;margin-bottom:10px;letter-spacing:1px;";
+wrap.appendChild(label);
+  
+const grid = document.createElement("div");
+grid.style.cssText = "display:grid;grid-template-columns:repeat(2,1fr);gap:8px;";
+
+candidates.forEach((c, i) => {
+const card = document.createElement("div");
+card.style.cssText = "background:#263348;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);";
+
+const img = document.createElement("img");
+img.src = c.imgUrl || "";
+img.style.cssText = "width:100%;height:90px;object-fit:cover;display:block;background:#334155;";
+img.onerror = () => { img.style.display = "none"; };
+  
+const title = document.createElement("div");
+title.textContent = c.title;
+title.style.cssText = "font-size:0.7em;color:#cbd5e1;padding:6px 8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;";
+
+const btn = document.createElement("button");
+btn.textContent = "✅ これを選ぶ";
+btn.style.cssText = "width:100%;background:#7c3aed;color:#fff;border:none;padding:8px;font-size:0.75em;font-weight:700;cursor:pointer;";
+btn.onclick = () => selectLensCandidate(c);
+  
+card.appendChild(img);
+card.appendChild(title);
+card.appendChild(btn);
+grid.appendChild(card);
+});
+  
+wrap.appendChild(grid);
+  
+const cancelBtn = document.createElement("button");
+cancelBtn.textContent = "✕ キャンセル";
+cancelBtn.style.cssText = "width:100%;margin-top:8px;background:transparent;color:#64748b;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px;font-size:0.8em;cursor:pointer;";
+cancelBtn.onclick = () => { localStorage.removeItem("bluestar_lens_candidates"); wrap.remove(); };
+wrap.appendChild(cancelBtn);
+  
+const listEl = document.getElementById("list-research");
+listEl.parentElement.insertBefore(wrap, listEl);
+}
+  
+function selectLensCandidate(c) {
+if (c.imgUrl) {     
+fetch(c.imgUrl)
+.then(r => r.blob())
+.then(blob => {
+const reader = new FileReader();
+reader.onload = ev => {
+currentImgData = ev.target.result;
+_openResearchForm(c.title);
+};
+reader.readAsDataURL(blob);
+})
+.catch(() => {
+currentImgData = null;
+_openResearchForm(c.title);
+});
+} else {
+currentImgData = null;
+_openResearchForm(c.title);
+}
+localStorage.removeItem("bluestar_lens_candidates");
+document.getElementById("lens-candidates-ui")?.remove();
+}
+  
+function _openResearchForm(title) {
+openAddModal('research');
+setTimeout(() => {
+document.getElementById("f-title").value = title;
+if (currentImgData) {
+document.getElementById("imgPreview").innerHTML = '<img src="' + currentImgData + '">';
+}
+}, 100);
+}
+  
 switchTab('research');
+showLensCandidates();
+// ======= Lens候補選択UI end =======
 </script>
 </body>
 </html>
