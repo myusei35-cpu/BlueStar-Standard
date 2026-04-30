@@ -524,7 +524,23 @@ function confirmSold(){if(!pendingSoldId)return;dbGetAll(function(items){var ite
 function openCalcForItem(id){calcTargetId=id;document.getElementById('calcSaveBtn').style.display='none';document.getElementById('calcModal').classList.add('open');}
 function closeCalcModal(){document.getElementById('calcModal').classList.remove('open');}
 function saveCalcResult(){if(!calcTargetId)return;var lbl=document.getElementById('cVLabel').textContent;var verdict=lbl.includes('非推奨')?'ng':lbl.includes('推奨')?'ok':'warn';var high=parseFloat(document.getElementById('cHigh').value)||0;var low=parseFloat(document.getElementById('cLow').value)||0;var profitText=document.getElementById('rPR').textContent.replace(/[^0-9\-]/g,'');var profit=parseInt(profitText)||0;dbGetAll(function(items){var item=items.find(function(i){return i.id===calcTargetId;});if(!item)return;item.calcVerdict=verdict;item.calcHigh=high;item.calcLow=low;item.calcProfit=profit;dbPut(item,function(){document.getElementById('calcSaveBtn').style.display='none';closeCalcModal();renderAll();});});}
-function exportCSV(type){dbGetAll(function(items){var filtered=items.filter(function(i){return i.status===type;});if(filtered.length===0){alert('データがありません');return;}var headers=['管理ID','ステータス','仕入日','仕入先店舗','ブランド・商品名','型番','サイズ・状態','仕入原価','保管場所','想定高値','想定安値','メモ','売却日','最終売上額','販売手数料','発送送料','クーポン','純利益'];var rows=filtered.map(function(item){return[item.id,item.status,item.buydate||'',item.shop||'',item.title||'',item.model||'',(item.size||'')+(item.condition?' '+item.condition:''),item.cost||'',item.location||'',item.calcHigh||'',item.calcLow||'',item.memo||'',item.solddate||'',item.soldprice||'',item.soldFee||'',item.soldShip||'',item.coupon||'',item.netProfit||''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');});var csv='\uFEFF'+headers.join(',')+'\n'+rows.join('\n');var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='bluestar_'+type+'_'+todayStr()+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);});}
+function exportCSV(type){dbGetAll(function(items){var filtered=items.filter(function(i){return i.status===type;});if(filtered.length===0){alert('データがありません');return;}
+  var headers=['管理ID','ステータス','仕入日','仕入先店舗',
+  'ブランド・商品名','型番','サイズ・状態','仕入原価',
+  '保管場所','出品日','想定高値','想定安値',
+  '損益分岐','売れる価格','配送方法(想定)',
+  '売却日','最終売上額','販売手数料(実績)',
+  '発送送料実績','クーポン','純利益'];
+var rows=filtered.map(function(item){return[
+  item.id,item.status,item.buydate||'',item.shop||'',
+  item.title||'',item.model||'',
+  (item.size||'')+(item.condition?' '+item.condition:''),
+  item.cost||'',item.location||'',
+  item.listdate||'',item.calcHigh||'',item.calcLow||'',
+  item.breakeven||'',item.sellPrice||'',item.shipMethod||'',
+  item.solddate||'',item.soldprice||'',
+  item.soldFee||'',item.soldShip||'',
+  item.coupon||'',item.netProfit||''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');});var csv='\uFEFF'+headers.join(',')+'\n'+rows.join('\n');var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='bluestar_'+type+'_'+todayStr()+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);});}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function round100(n){return Math.round(n/100)*100;}
 function fmt(n){return n.toLocaleString('ja-JP')+'円';}
@@ -612,7 +628,10 @@ const cancelBtn = document.createElement("button");
 cancelBtn.textContent = "✕ キャンセル";
 cancelBtn.style.cssText = "width:100%;margin-top:8px;background:transparent;color:#64748b;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px;font-size:0.8em;cursor:pointer;";
 cancelBtn.onclick = () => {
-    chrome.runtime.sendMessage({ type: "CLEAR_LENS_CANDIDATES" });
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("lens")) {
+      history.replaceState(null, "", window.location.pathname);
+    }
     wrap.remove();
   };
 wrap.appendChild(cancelBtn);
