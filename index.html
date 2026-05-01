@@ -436,6 +436,19 @@
     a.click();
     document.body.removeChild(a);
   }
+  function openQuetta(idx) {
+    var url = window['__siteUrl_' + idx];
+    if (!url) return;
+    var targetPath = url.replace(/^https?:\/\//, '');
+    var intentUrl = 'intent://' + targetPath +
+      '#Intent;scheme=https;package=net.quetta.browser;' +
+      'S.browser_fallback_url=;end;';
+    var a = document.createElement('a');
+    a.href = intentUrl;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
 
   function showLensSubmit() {
     var fileInput = document.getElementById('imageInput');
