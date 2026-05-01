@@ -282,14 +282,15 @@
       let html = '';
       sites.forEach(site => {
         let btn;
-        const safeUrl = site.url.replace(/'/g, "&#39;");
+        const idx = sites.indexOf(site);
+        window['__siteUrl_' + idx] = site.url;
         if (site.quetta) {
-          const targetPath = safeUrl.replace(/^https?:\/\//, '');
-          const quettaUrl = 'intent://' + targetPath +
-            '#Intent;scheme=https;package=net.quetta.browser;' +
-            'S.browser_fallback_url=;end;';
           btn = `<button class="open-btn" 
-            onclick="location.href='${quettaUrl}'"
+            onclick="openQuetta(${idx})"
+            >開く ➔</button>`;
+        } else {
+          btn = `<button class="open-btn" 
+            onclick="openFinalURL(window['__siteUrl_${idx}'])"
             >開く ➔</button>`;
         } else {
           btn = `<button class="open-btn" 
