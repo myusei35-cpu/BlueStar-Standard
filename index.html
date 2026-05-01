@@ -286,7 +286,7 @@
           // intent://でQuettaを直接指定・選択画面なし
           const targetPath = site.url.replace(/^https?:\/\//, '');
           const quettaUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=net.quetta.browser;S.browser_fallback_url=;end;';
-          btn = `<button class="open-btn" onclick="location.href='${quettaUrl}'">開く ➔</button>`;
+          btn = `<button class="open-btn" onclick="window.location.href='${quettaUrl}'">開く ➔</button>`;
         } else {
           btn = `<button class="open-btn" onclick="openFinalURL('${site.url}')">開く ➔</button>`;
         }        html += `
