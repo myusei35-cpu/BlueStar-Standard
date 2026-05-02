@@ -804,8 +804,8 @@
         link.closest("div")?.querySelector("img");
       const imgUrl = imgEl?.src || imgEl?.dataset?.src || "";
 
-      // 候補リストに追加（上位10件まで）
-      if (candidates.length < 10) {
+      // 候補リストに追加（上位5件まで）
+      if (candidates.length < 5) {
         candidates.push({ title: keyword, imgUrl, mercariUrl: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(keyword) });
       }
 
@@ -834,11 +834,12 @@
       }
     });
 
-    // 候補をchrome.storage.localに一時保存
+    // 候補をLocalStorageに一時保存
     if (candidates.length > 0) {
-      chrome.storage.local.set({
-        bluestar_lens_candidates: candidates
-      });
+      localStorage.setItem(
+        "bluestar_lens_candidates",
+        JSON.stringify(candidates)
+      );
     }
 
     if (injected > 0) showToast(
@@ -857,8 +858,14 @@
         "font-family:system-ui,sans-serif;cursor:pointer;" +
         "box-shadow:0 4px 16px rgba(124,58,237,0.5);";
       invBtn.onclick = () => {
+        const slim = candidates.map(c => ({
+          title: c.title,
+          mercariUrl: c.mercariUrl
+        }));
+        const data = encodeURIComponent(JSON.stringify(slim));
         window.open(
-          "https://myusei35-cpu.github.io/BlueStar-Standard/inventory.html",
+          "https://myusei35-cpu.github.io/BlueStar-Standard/inventory.html" +
+          "?lens=" + data,
           "_blank"
         );
       };
@@ -2635,6 +2642,7 @@
             btnWrap.appendChild(actionDiv);
 
             const execBtn = document.createElement("button");
+            execBtn.dataset.manageId = manageId || '';
             execBtn.textContent = `▼ ¥${action.newPrice.toLocaleString()} に値下げ`;
             execBtn.style.cssText =
               "background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;" +
@@ -2885,7 +2893,8 @@
         productId: productIdMatch[1],
         newPrice: newPrice,
         wrap: wrap,
-        execBtn: execBtn
+        execBtn: execBtn,
+        manageId: execBtn.dataset.manageId || null
       });
     });
 
@@ -2924,6 +2933,19 @@
         t.execBtn.textContent = `✅ ¥${t.newPrice.toLocaleString()} に変更済み`;
         t.execBtn.style.background = '#16a34a';
         success++;
+        if (t.manageId) {
+          const changedAt = new Date().toLocaleString('ja-JP');
+          fetch(SHOPS_ADMIN_GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              token: SHOPS_ADMIN_TOKEN,
+              id: t.manageId,
+              changedAt: changedAt
+            })
+          }).catch(() => {});
+        }
 
       } catch(err) {
         t.execBtn.textContent = `❌ エラー: ${err.message}`;
