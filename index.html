@@ -201,14 +201,8 @@
       document.getElementById('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
     }
 
-    // 型番リスト読み込み
+    // 型番リスト（廃止）
     let modelList = [];
-    fetch('model_list.csv')
-      .then(r => r.text())
-      .then(text => {
-        modelList = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      })
-      .catch(e => console.error('model_list.csvエラー:', e));
 
     //======始点: PATCH======
     function generateLinks() {
@@ -385,11 +379,6 @@
           .filter(b => b.en.toLowerCase().startsWith(lowerVal))
           .map(b => ({ label: b.en, value: b.en, price: null }));
 
-        // model_list.csv由来（価格なし）
-        const csvModelMatches = modelList
-          .filter(m => m.toLowerCase().startsWith(lowerVal))
-          .map(m => ({ label: m, value: m, price: null }));
-
         // GASスプシ由来（価格あり）
         const gasMatches = modelPriceList
           .filter(item =>
@@ -404,7 +393,7 @@
             price: item.price
           }));
 
-        matches = [...brandMatches, ...csvModelMatches, ...gasMatches];
+        matches = [...brandMatches, ...gasMatches];
       } else {
         const kataVal = hiraToKata(val);
         matches = brandDictionary
