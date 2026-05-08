@@ -357,13 +357,21 @@
   const inputField = document.getElementById('keyword');
   const suggestionBox = document.getElementById('suggestionBox');
 
+  // 型番一覧スプシ（GAS WebApp）からデータ読み込み
+  let modelPriceList = [];
+  fetch('https://script.google.com/macros/s/AKfycbzn_tar2WrC70a5ArRm1Ar9lSubGm_sgWH6FD8z3jrEi4kAzj-cHy8sQ5-ib-mO2dOH/exec')
+    .then(r => r.json())
+    .then(data => {
+      modelPriceList = data;
+    })
+    .catch(e => console.error('GAS WebAppエラー:', e));
+
   var suggestionTimer = null;
   inputField.addEventListener('input', function() {
     const val = this.value;
     suggestionBox.innerHTML = '';
     if (!val) { suggestionBox.style.display = 'none'; return; }
 
-    // デバウンス：300ms入力が止まってから検索
     clearTimeout(suggestionTimer);
     suggestionTimer = setTimeout(function() {
       const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
@@ -371,21 +379,49 @@
 
       if (isEnglishInput) {
         const lowerVal = val.toLowerCase();
-        matches = brandDictionary.filter(b => b.en.toLowerCase().startsWith(lowerVal)).map(b => b.en);
-        const modelMatches = modelList.filter(m => m.toLowerCase().startsWith(lowerVal));
-        matches = [...matches, ...modelMatches];
+
+        // brand.csv由来（価格なし）
+        const brandMatches = brandDictionary
+          .filter(b => b.en.toLowerCase().startsWith(lowerVal))
+          .map(b => ({ label: b.en, value: b.en, price: null }));
+
+        // model_list.csv由来（価格なし）
+        const csvModelMatches = modelList
+          .filter(m => m.toLowerCase().startsWith(lowerVal))
+          .map(m => ({ label: m, value: m, price: null }));
+
+        // GASスプシ由来（価格あり）
+        const gasMatches = modelPriceList
+          .filter(item =>
+            item.model.toLowerCase().startsWith(lowerVal)
+          )
+          .map(item => ({
+            label: item.price
+              ? item.model + '　¥' +
+                Number(item.price).toLocaleString('ja-JP')
+              : item.model,
+            value: item.model,
+            price: item.price
+          }));
+
+        matches = [...brandMatches, ...csvModelMatches, ...gasMatches];
       } else {
         const kataVal = hiraToKata(val);
-        matches = brandDictionary.filter(b => b.kana.startsWith(kataVal)).map(b => b.kana);
+        matches = brandDictionary
+          .filter(b => b.kana.startsWith(kataVal))
+          .map(b => ({ label: b.kana, value: b.kana, price: null }));
       }
 
       if (matches.length > 0) {
-        suggestionBox.innerHTML = ''; // デバウンス後の確実なクリア
-        matches.forEach(brandName => {
+        suggestionBox.innerHTML = '';
+        matches.forEach(item => {
           const div = document.createElement('div');
           div.className = 'suggestion-item';
-          div.textContent = brandName;
-          div.onclick = function() { inputField.value = brandName; suggestionBox.style.display = 'none'; };
+          div.textContent = item.label;
+          div.onclick = function() {
+            inputField.value = item.value; // 型番のみ反映
+            suggestionBox.style.display = 'none';
+          };
           suggestionBox.appendChild(div);
         });
         suggestionBox.style.display = 'block';
