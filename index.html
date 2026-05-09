@@ -385,10 +385,11 @@
             item.model.toLowerCase().startsWith(lowerVal)
           )
           .map(item => ({
-            label: item.price
-              ? item.model + '　¥' +
-                Number(item.price).toLocaleString('ja-JP')
-              : item.model,
+            label: item.model +
+            (item.brand ? '　' + item.brand : '') +
+            (item.price
+              ? '　¥' + Number(item.price).toLocaleString('ja-JP')
+              : ''),
             value: item.model,
             price: item.price
           }));
