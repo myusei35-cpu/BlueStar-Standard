@@ -532,7 +532,10 @@
   });
 
   document.addEventListener('click', function(e) {
-    if (e.target !== inputField && e.target !== suggestionBox) suggestionBox.style.display = 'none';
+    if (e.target !== inputField && e.target !== suggestionBox &&
+        !suggestionBox.contains(e.target)) {
+      suggestionBox.style.display = 'none';
+    }
   });
 
   function openActionMenu() { document.getElementById('actionModal').style.display = 'flex'; }
