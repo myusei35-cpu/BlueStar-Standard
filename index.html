@@ -342,6 +342,30 @@
     })
     .catch(error => console.error('CSVエラー:', error));
 
+
+    function detectBrandLocal(title) {
+    const titleLower = title.toLowerCase();
+    for (const b of brandDictionary) {
+      if (b.en && b.en.length >= 3) {
+        const escaped = b.en.replace(
+          /[-\/\\^$*+?.()|[\]{}]/g, '\\$&'
+        );
+        const pat = new RegExp(
+          '(^|[\\s\\[\\]【】「」（）()\\-_/])' +
+          escaped +
+          '($|[\\s\\[\\]【】「」（）()\\-_/])',
+          'i'
+        );
+        if (pat.test(title)) return b.en;
+      }
+      if (b.kana && b.kana.length >= 3 &&
+          title.indexOf(b.kana) !== -1) {
+        return b.en || b.kana;
+      }
+    }
+    return '';
+  }
+
   function hiraToKata(str) {
     return str.replace(/[\u3041-\u3096]/g, function(match) {
       return String.fromCharCode(match.charCodeAt(0) + 0x60);
@@ -379,21 +403,27 @@
           .filter(b => b.en.toLowerCase().startsWith(lowerVal))
           .map(b => ({ label: b.en, value: b.en, price: null }));
 
-        // GASスプシ由来（価格あり）
+// GASスプシ由来（価格あり）
         const gasMatches = modelPriceList
           .filter(item =>
             item.model.toLowerCase().startsWith(lowerVal)
           )
-          .map(item => ({
-            label: item.model +
-            (item.brand ? '　' + item.brand : '') +
-            (item.price
-              ? '　¥' + Number(item.price).toLocaleString('ja-JP')
-              : '') +
-            (item.soldDate ? '　(' + item.soldDate + ')' : ''),
-            value: item.model,
-            price: item.price
-          }));
+          .map(item => {
+            const brand = item.brand ||
+              (item.title ? detectBrandLocal(item.title) : '');
+            return {
+              label: item.model +
+                (brand ? '　' + brand : '') +
+                (item.price
+                  ? '　¥' +
+                    Number(item.price).toLocaleString('ja-JP')
+                  : '') +
+                (item.soldDate
+                  ? '　(' + item.soldDate + ')' : ''),
+              value: item.model,
+              price: item.price
+            };
+          });
 
         matches = [...brandMatches, ...gasMatches];
       } else {
