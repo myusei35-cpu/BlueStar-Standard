@@ -445,7 +445,7 @@
         // brand.csv由来（価格なし）
         const brandMatches = brandDictionary
           .filter(b => b.en.toLowerCase().startsWith(lowerVal))
-          .map(b => ({ label: b.en, value: b.en, price: null }));
+          .map(b => ({ label: b.en, value: b.en, price: null, isBrand: true }));
 
 // GASスプシ由来（価格あり）
         const gasMatches = modelPriceList
@@ -486,6 +486,41 @@
           div.onclick = function() {
             inputField.value = item.value; // 型番のみ反映
             suggestionBox.style.display = 'none';
+
+            // ブランド名タップ時：同ブランドの型番一覧を表示
+            if (item.isBrand) {
+              const brandVal = item.value;
+              const brandModels = modelPriceList
+                .filter(m => m.brand &&
+                  m.brand.toLowerCase() === brandVal.toLowerCase()
+                )
+                .map(m => ({
+                  label: m.model +
+                    (m.price
+                      ? '　¥' +
+                        Number(m.price).toLocaleString('ja-JP')
+                      : '') +
+                    (m.soldDate ? '　(' + m.soldDate + ')' : ''),
+                  value: m.model,
+                  isBrand: false
+                }));
+
+              if (brandModels.length > 0) {
+                inputField.value = '';
+                suggestionBox.innerHTML = '';
+                brandModels.forEach(bm => {
+                  const d2 = document.createElement('div');
+                  d2.className = 'suggestion-item';
+                  d2.textContent = bm.label;
+                  d2.onclick = function() {
+                    inputField.value = bm.value;
+                    suggestionBox.style.display = 'none';
+                  };
+                  suggestionBox.appendChild(d2);
+                });
+                suggestionBox.style.display = 'block';
+              }
+            }
           };
           suggestionBox.appendChild(div);
         });
