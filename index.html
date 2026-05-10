@@ -994,7 +994,8 @@
     </div>
   </div>
 
-　  function refreshModelCache() {
+　  <script>
+  function refreshModelCache() {
     localStorage.removeItem('modelPriceCache');
     modelPriceList = [];
     modelPriceListReady = false;
@@ -1020,8 +1021,6 @@
         alert('更新に失敗しました');
       });
   }
-  
-  <script>
   function openCalcModal()  { document.getElementById('calcModal').style.display = 'flex'; }
   function closeCalcModal() { document.getElementById('calcModal').style.display = 'none'; }
 
