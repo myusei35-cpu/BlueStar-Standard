@@ -368,7 +368,7 @@
 
     clearTimeout(suggestionTimer);
     suggestionTimer = setTimeout(function() {
-      const isEnglishInput = /^[a-zA-Z0-9\s]+$/.test(val);
+      const isEnglishInput = /^[a-zA-Z0-9\s\-]+$/.test(val);
       let matches = [];
 
       if (isEnglishInput) {
