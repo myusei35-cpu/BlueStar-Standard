@@ -508,8 +508,12 @@
                 }));
 
               if (brandModels.length > 0) {
-                inputField.value = '';
-                suggestionBox.innerHTML = '';
+                inputField.value = brandVal;
+                suggestionBox.innerHTML =
+                  '<div style="padding:8px 16px;font-size:0.75em;' +
+                  'color:#3b82f6;font-weight:700;letter-spacing:1px;">' +
+                  '▼ ' + brandVal + ' の型番一覧（' +
+                  brandModels.length + '件）</div>';
                 brandModels.forEach(bm => {
                   const d2 = document.createElement('div');
                   d2.className = 'suggestion-item';
