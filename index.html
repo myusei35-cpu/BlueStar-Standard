@@ -377,12 +377,25 @@
 
   // 型番一覧スプシ（GAS WebApp）からデータ読み込み
   let modelPriceList = [];
+  let modelPriceListReady = false;
+  const inputField2 = document.getElementById('keyword');
+  inputField2.placeholder = '⏳ データ読み込み中...';
+  inputField2.disabled = true;
   fetch('https://script.google.com/macros/s/AKfycbzkyZt_MwyZmr7ef9914Rt84flWqa8KjvReBIvGoRfgBTaGa9rMcranrYjytfXzxyGh/exec')
     .then(r => r.json())
     .then(data => {
       modelPriceList = data;
+      modelPriceListReady = true;
+      inputField2.disabled = false;
+      inputField2.placeholder =
+        '🔍 キーワードを入力 / Gboardカメラでテキストスキャン可';
     })
-    .catch(e => console.error('GAS WebAppエラー:', e));
+    .catch(e => {
+      console.error('GAS WebAppエラー:', e);
+      inputField2.disabled = false;
+      inputField2.placeholder =
+        '🔍 キーワードを入力 / Gboardカメラでテキストスキャン可';
+    });
 
   var suggestionTimer = null;
   inputField.addEventListener('input', function() {
