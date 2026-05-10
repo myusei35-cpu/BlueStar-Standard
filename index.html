@@ -474,7 +474,7 @@
         const kataVal = hiraToKata(val);
         matches = brandDictionary
           .filter(b => b.kana.startsWith(kataVal))
-          .map(b => ({ label: b.kana, value: b.kana, price: null, isBrand: true }));
+          .map(b => ({ label: b.kana, value: b.kana, price: null, isBrand: true, enName: b.en }));
       }
 
       if (matches.length > 0) {
@@ -493,9 +493,11 @@
             if (item.isBrand) {
               const brandVal = item.value;
               const brandModels = modelPriceList
-                .filter(m => m.brand &&
-                  m.brand.toLowerCase() === brandVal.toLowerCase()
-                )
+                .filter(m => m.brand && (
+                  m.brand.toLowerCase() === brandVal.toLowerCase() ||
+                  (item.enName &&
+                    m.brand.toLowerCase() === item.enName.toLowerCase())
+                ))
                 .map(m => ({
                   label: m.model +
                     (m.price
