@@ -389,7 +389,8 @@
             (item.brand ? '　' + item.brand : '') +
             (item.price
               ? '　¥' + Number(item.price).toLocaleString('ja-JP')
-              : ''),
+              : '') +
+            (item.soldDate ? '　(' + item.soldDate + ')' : ''),
             value: item.model,
             price: item.price
           }));
