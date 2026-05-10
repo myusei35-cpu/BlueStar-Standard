@@ -474,7 +474,7 @@
         const kataVal = hiraToKata(val);
         matches = brandDictionary
           .filter(b => b.kana.startsWith(kataVal))
-          .map(b => ({ label: b.kana, value: b.kana, price: null }));
+          .map(b => ({ label: b.kana, value: b.kana, price: null, isBrand: true }));
       }
 
       if (matches.length > 0) {
@@ -507,6 +507,7 @@
                   isBrand: false
                 }));
 
+              brandModels.sort((a, b) => a.value.localeCompare(b.value));
               if (brandModels.length > 0) {
                 inputField.value = brandVal;
                 suggestionBox.innerHTML =
