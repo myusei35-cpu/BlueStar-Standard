@@ -484,8 +484,10 @@
           div.className = 'suggestion-item';
           div.textContent = item.label;
           div.onclick = function() {
-            inputField.value = item.value; // 型番のみ反映
-            suggestionBox.style.display = 'none';
+            if (!item.isBrand) {
+              inputField.value = item.value; // 型番のみ反映
+              suggestionBox.style.display = 'none';
+            }
 
             // ブランド名タップ時：同ブランドの型番一覧を表示
             if (item.isBrand) {
