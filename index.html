@@ -320,6 +320,10 @@
       <button class="modal-btn" style="background-color:#7c3aed;" onclick="closeActionMenu(event); openQuetta_inv();"
         ck="closeActionMenu(event); window.open('https://myusei35-cpu.github.io/BlueStar-Standard/inventory.html','_blank');">📦 仕入れ管理
       </button> 
+      <button class="modal-btn" style="background-color:#b45309;" 
+        onclick="closeActionMenu(event); refreshModelCache();">
+        🔄 型番データ更新
+      </button>
       <button class="modal-btn cancel" onclick="closeActionMenu(event)">キャンセル</button>
     </div>
   </div>
@@ -382,7 +386,7 @@
   const GAS_URL = 'https://script.google.com/macros/s/' +
     'AKfycbzkyZt_MwyZmr7ef9914Rt84flWqa8KjvReBIvGoRfgBTaGa9rMcranrYjytfXzxyGh/exec';
   const CACHE_KEY = 'modelPriceCache';
-  const CACHE_TTL = 60 * 60 * 1000; // 1時間
+  const CACHE_TTL = 10 * 365 * 24 * 60 * 60 * 1000; // 10年
 
   const enableInput = () => {
     inputField2.disabled = false;
@@ -990,6 +994,33 @@
     </div>
   </div>
 
+　  function refreshModelCache() {
+    localStorage.removeItem('modelPriceCache');
+    modelPriceList = [];
+    modelPriceListReady = false;
+    inputField2.placeholder = '⏳ データ更新中...';
+    inputField2.disabled = true;
+    fetch(GAS_URL)
+      .then(r => r.json())
+      .then(data => {
+        modelPriceList = data;
+        modelPriceListReady = true;
+        try {
+          localStorage.setItem('modelPriceCache', JSON.stringify({
+            data: data,
+            savedAt: Date.now()
+          }));
+        } catch(e) {}
+        enableInput();
+        alert('型番データを更新しました（' + data.length + '件）');
+      })
+      .catch(e => {
+        console.error('更新エラー:', e);
+        enableInput();
+        alert('更新に失敗しました');
+      });
+  }
+  
   <script>
   function openCalcModal()  { document.getElementById('calcModal').style.display = 'flex'; }
   function closeCalcModal() { document.getElementById('calcModal').style.display = 'none'; }
