@@ -379,23 +379,50 @@
   let modelPriceList = [];
   let modelPriceListReady = false;
   const inputField2 = document.getElementById('keyword');
-  inputField2.placeholder = '⏳ データ読み込み中...';
-  inputField2.disabled = true;
-  fetch('https://script.google.com/macros/s/AKfycbzkyZt_MwyZmr7ef9914Rt84flWqa8KjvReBIvGoRfgBTaGa9rMcranrYjytfXzxyGh/exec')
-    .then(r => r.json())
-    .then(data => {
-      modelPriceList = data;
+  const GAS_URL = 'https://script.google.com/macros/s/' +
+    'AKfycbzkyZt_MwyZmr7ef9914Rt84flWqa8KjvReBIvGoRfgBTaGa9rMcranrYjytfXzxyGh/exec';
+  const CACHE_KEY = 'modelPriceCache';
+  const CACHE_TTL = 60 * 60 * 1000; // 1時間
+
+  const enableInput = () => {
+    inputField2.disabled = false;
+    inputField2.placeholder =
+      '🔍 キーワードを入力 / Gboardカメラでテキストスキャン可';
+  };
+
+  // localStorageキャッシュ確認
+  let useCache = false;
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if (cached && (Date.now() - cached.savedAt) < CACHE_TTL) {
+      modelPriceList = cached.data;
       modelPriceListReady = true;
-      inputField2.disabled = false;
-      inputField2.placeholder =
-        '🔍 キーワードを入力 / Gboardカメラでテキストスキャン可';
-    })
+      useCache = true;
+      enableInput();
+    }
+  } catch(e) {}
+
+  if (!useCache) {
+    inputField2.placeholder = '⏳ データ読み込み中...';
+    inputField2.disabled = true;
+    fetch(GAS_URL)
+      .then(r => r.json())
+      .then(data => {
+        modelPriceList = data;
+        modelPriceListReady = true;
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            data: data,
+            savedAt: Date.now()
+          }));
+        } catch(e) {}
+        enableInput();
+      })
     .catch(e => {
       console.error('GAS WebAppエラー:', e);
-      inputField2.disabled = false;
-      inputField2.placeholder =
-        '🔍 キーワードを入力 / Gboardカメラでテキストスキャン可';
+      enableInput();
     });
+  }
 
   var suggestionTimer = null;
   inputField.addEventListener('input', function() {
