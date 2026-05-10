@@ -520,7 +520,9 @@
                   };
                   suggestionBox.appendChild(d2);
                 });
-                suggestionBox.style.display = 'block';
+                setTimeout(() => {
+                  suggestionBox.style.display = 'block';
+                }, 50);
               }
             }
           };
