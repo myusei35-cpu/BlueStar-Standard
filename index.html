@@ -108,6 +108,16 @@
       cursor: pointer; color: #94a3b8; font-size: 1.2em; display: none; 
     }
 
+    .mic-btn {
+      position: absolute; right: 40px; top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer; font-size: 1.2em;
+      display: block; background: none; border: none;
+      color: #94a3b8;
+    }
+    .mic-btn.active { color: #ef4444; }
+
+    
     .suggestion-box { 
       position: absolute; bottom: 100%; left: 0; width: 100%; 
       background-color: #1e293b; border: 1px solid rgba(255,255,255,0.1); 
@@ -173,6 +183,7 @@
       <div class="search-row">
         <div class="input-wrapper">
           <input id="keyword" type="text" inputmode="search" placeholder="🔍 キーワードを入力 / Gboardカメラでテキストスキャン可" autocomplete="off" oninput="toggleClearBtn(this.value)">
+          <button class="mic-btn" id="micBtn" onclick="startVoiceInput()">🎤</button>
           <span class="clear-btn" id="clearBtn" onclick="document.getElementById('keyword').value=''; this.style.display='none'; document.getElementById('suggestionBox').style.display='none';">❌</span>
           <div id="suggestionBox" class="suggestion-box"></div>
         </div>
@@ -200,6 +211,34 @@
     function toggleClearBtn(val) {
       document.getElementById('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
     }
+
+  function startVoiceInput() {
+    const btn = document.getElementById('micBtn');
+    const input = document.getElementById('keyword');
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = 'ja-JP';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    btn.classList.add('active');
+    btn.textContent = '🔴';
+    recognition.start();
+    recognition.onresult = function(e) {
+      const text = e.results[0][0].transcript;
+      input.value = text;
+      toggleClearBtn(text);
+      input.dispatchEvent(new Event('input'));
+      btn.classList.remove('active');
+      btn.textContent = '🎤';
+    };
+    recognition.onerror = function() {
+      btn.classList.remove('active');
+      btn.textContent = '🎤';
+    };
+    recognition.onend = function() {
+      btn.classList.remove('active');
+      btn.textContent = '🎤';
+    };
+  }
 
     // 型番リスト（廃止）
     let modelList = [];
