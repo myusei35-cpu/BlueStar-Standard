@@ -223,7 +223,9 @@
     btn.textContent = '🔴';
     recognition.start();
     recognition.onresult = function(e) {
-      const text = e.results[0][0].transcript.trim();
+      const text = e.results[0][0].transcript.trim()
+        .replace(/([A-Za-z])\s+([0-9])/g, '$1$2')
+        .replace(/([0-9])\s+([A-Za-z])/g, '$1$2');
       input.value = text;
       toggleClearBtn(text);
       setTimeout(function() {
