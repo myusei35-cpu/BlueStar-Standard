@@ -182,7 +182,7 @@
     <div class="bottom-panel">
       <div class="search-row">
         <div class="input-wrapper">
-          <input id="keyword" type="text" inputmode="search" placeholder="🔍 キーワードを入力 / Gboardカメラでテキストスキャン可" autocomplete="off" oninput="toggleClearBtn(this.value)">
+          <input id="keyword" type="text" inputmode="search" placeholder="🔍 キーワードを入力" autocomplete="off" oninput="toggleClearBtn(this.value)">
           <button class="mic-btn" id="micBtn" onclick="startVoiceInput()">🎤</button>
           <span class="clear-btn" id="clearBtn" onclick="document.getElementById('keyword').value=''; this.style.display='none'; document.getElementById('suggestionBox').style.display='none';">❌</span>
           <div id="suggestionBox" class="suggestion-box"></div>
