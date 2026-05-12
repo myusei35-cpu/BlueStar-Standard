@@ -223,10 +223,12 @@
     btn.textContent = '🔴';
     recognition.start();
     recognition.onresult = function(e) {
-      const text = e.results[0][0].transcript;
+      const text = e.results[0][0].transcript.trim();
       input.value = text;
       toggleClearBtn(text);
-      input.dispatchEvent(new Event('input'));
+      setTimeout(function() {
+        input.dispatchEvent(new Event('input'));
+      }, 100);
       btn.classList.remove('active');
       btn.textContent = '🎤';
     };
