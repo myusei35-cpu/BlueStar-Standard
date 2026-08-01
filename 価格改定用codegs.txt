@@ -3,32 +3,28 @@ function onEdit(e) {
   if (!e || !e.range) return;
   const sheet = e.range.getSheet();
   
-  // Actionシート以外での編集は無視
   if (sheet.getName() !== 'Action') return;
 
   const col = e.range.getColumn();
   const row = e.range.getRow();
 
-  // K列（11列目）が「❤いいね数」の入力欄。ここ以外の編集や、ヘッダー行は無視
   if (col !== 11 || row <= 1) return;
 
-  const likes = e.value; // 入力されたいいね数
-  const id = sheet.getRange(row, 7).getValue(); // G列（7列目）にある管理IDを取得
+  const likes = e.value;
+  const id = sheet.getRange(row, 7).getValue();
 
   if (!id) return;
 
   const dbSheet = e.source.getSheetByName('DB');
   const dbData = dbSheet.getRange("A:A").getValues();
 
-  // DBシートから同じ管理IDを探し出し、AF列（32列目）にいいね数をこっそり保存
   for (let i = 1; i < dbData.length; i++) {
     if (dbData[i][0] == id) {
-      dbSheet.getRange(i + 1, 32).setValue(likes);
+      dbSheet.getRange(i + 1, 33).setValue(likes);
       break;
     }
   }
 
-  // 保存が完了したら、即座にActionシートを最新状態に再計算・リロードする
   updateActionSheet();
 }
 
@@ -39,7 +35,9 @@ function updateActionSheet() {
   const actionSheet = ss.getSheetByName('Action');
   
   if (!dbSheet || !actionSheet) {
-    SpreadsheetApp.getUi().alert('エラー：「DB」または「Action」という名前のシートが見つかりません。');
+    SpreadsheetApp.getUi().alert(
+      'エラー：「DB」または「Action」という名前のシートが見つかりません。'
+    );
     return;
   }
   
@@ -47,9 +45,12 @@ function updateActionSheet() {
   const today = new Date();
   today.setHours(0, 0, 0, 0); 
   
-  // K列に「❤いいね数 (入力)」を追加
   const actionData = [
-    ['画像', 'ブランド・商品名 (型番)', '本日の推奨アクション', '目標(ストッパー)', '相場URL', '経過日数', '管理ID', 'サイズ・状態', '保管場所', '出品日', '❤いいね数(入力)']
+    [
+      '画像', 'ブランド・商品名 (型番)', '本日の推奨アクション',
+      '目標(ストッパー)', '相場URL', '経過日数', '管理ID',
+      'サイズ・状態', '保管場所', '出品日', '❤いいね数(入力)'
+    ]
   ];
   
   for (let i = 1; i < dbData.length; i++) {
@@ -57,39 +58,43 @@ function updateActionSheet() {
     const status = String(row[1] || "").replace(/\s+/g, "");
     
     if (status === "販売中" || status === "損切") {
-      const id = row[0]; // A列: 管理ID
-      const name = row[4]; // E列: ブランド・商品名
-      const modelNum = row[5]; // F列: 型番
-      const sizeStatus = row[6]; // G列: サイズ・状態
-      const cost = Number(row[7]) || 0; // H列: 仕入原価
-      const location = row[8]; // I列: 保管場所
-      const listDateStr = row[9]; // J列: 出品日
+      const id = row[0];
+      const name = row[4];
+      const modelNum = row[6];       // G列：型番
+      const sizeStatus = row[7];     // H列：サイズ・状態
+      const cost = Number(row[8]) || 0;  // I列：仕入原価
+      const location = row[9];       // J列：保管場所
+      const listDateStr = row[10];   // K列：出品日
       
-      const highPrice = Number(row[10]) || 0;     // K列: 想定高値
-      const lowPrice = Number(row[11]) || 0;      // L列: 想定安値
-      const breakEvenInDB = Number(row[12]) || 0; // M列: 損益分岐（第1の床）
-      const estShipping = Number(row[14]) || 0;   // O列: 想定送料
+      const highPrice = Number(row[11]) || 0;      // L列：想定高値
+      const lowPrice = Number(row[12]) || 0;       // M列：想定安値
+      const breakEvenInDB = Number(row[13]) || 0;  // N列：損益分岐
+      let estShipping = Number(row[15]) || 0;    // P列：想定送料
+      if (estShipping > 0 && estShipping <= 750) estShipping = 750;  // 750円以下は750円に統一（850/1050はそのまま）
+
+      const itemUrl = row[22];    // W列：出品URL
+      const imageUrl = row[23];   // X列：画像URL
+      const marketUrl = row[24];  // Y列：相場URL
       
-      const itemUrl = row[21];   // V列: 出品URL
-      const imageUrl = row[22];  // W列: 画像URL
-      const marketUrl = row[23]; // X列: 相場URL
+      const likes = row[32] === "" ? "" : Number(row[32]); // AG列
       
-      const likes = row[31] === "" ? "" : Number(row[31]); // AF列(32番目): いいね数（システムの記憶）
+      const rawFirstFloor = Math.ceil(
+        (cost + 500 + estShipping) / 0.9
+      );
+      const firstFloorCalc =
+        Math.floor(rawFirstFloor / 100) * 100 + 80 < rawFirstFloor
+          ? Math.floor(rawFirstFloor / 100) * 100 + 180
+          : Math.floor(rawFirstFloor / 100) * 100 + 80;
+      const firstFloor = firstFloorCalc;
       
-      // 【2段階ストッパーの設定】
-      // 第1の床：赤字絶対阻止ライン（DBのM列そのまま、または未入力時の計算）
-      const rawFirstFloor = Math.ceil((cost + 500 + estShipping) / 0.9);
-const firstFloorCalc = Math.floor(rawFirstFloor / 100) * 100 + 80 < rawFirstFloor
-  ? Math.floor(rawFirstFloor / 100) * 100 + 180
-  : Math.floor(rawFirstFloor / 100) * 100 + 80;
-const firstFloor = breakEvenInDB > 0 ? breakEvenInDB : firstFloorCalc;
-      
-      // 第2の床：限界処分ライン（原価ゼロ・経費のみ100%回収）
-      const rawDeadPrice = Math.ceil((770 + 500 + estShipping) / 0.9);
-const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
-  ? Math.floor(rawDeadPrice / 100) * 100 + 180
-  : Math.floor(rawDeadPrice / 100) * 100 + 80;
-      
+      const rawCutloss = Math.ceil(
+        (cost + estShipping) / 0.9
+      );
+      const cutloss =
+        Math.floor(rawCutloss / 100) * 100 + 80 < rawCutloss
+          ? Math.floor(rawCutloss / 100) * 100 + 180
+          : Math.floor(rawCutloss / 100) * 100 + 80;
+
       let listDate = new Date(listDateStr);
       let daysElapsed = 0;
       let actionText = '';
@@ -97,12 +102,13 @@ const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
       
       if (listDateStr && !isNaN(listDate.getTime())) {
         listDate.setHours(0, 0, 0, 0);
-        daysElapsed = Math.floor((today - listDate) / (1000 * 60 * 60 * 24));
+        daysElapsed = Math.floor(
+          (today - listDate) / (1000 * 60 * 60 * 24)
+        );
       } else {
         actionText = '⚠️出品日が未入力またはエラー';
       }
       
-      // ▼ いいね数に応じた「自動変速ギア」の判定
       let gearText = "";
       if (likes === "") {
         gearText = "【500円値下げ】(いいね未入力)";
@@ -115,9 +121,6 @@ const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
       }
       
       if (actionText === '') {
-        // ==========================================
-        // フェーズ1：1〜27日目（第1の床・赤字ブロック）
-        // ==========================================
         if (daysElapsed < 0) {
           actionText = '出品日が未来です';
           targetDisplay = '-';
@@ -125,12 +128,9 @@ const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
           actionText = '🚨14日経過！タイトルを変え【適正相場】で再出品';
           targetDisplay = '適正相場へ';
         } else if (daysElapsed <= 27) {
-          actionText = gearText; // いいね数に応じた値下げ指示
-          targetDisplay = '【第1の床】¥' + firstFloor.toLocaleString() + ' まで';
-          
-        // ==========================================
-        // フェーズ2：28日目以降（第1の床解除 → 限界処分へ）
-        // ==========================================
+          actionText = gearText;
+          targetDisplay =
+            '【第1の床】¥' + firstFloor.toLocaleString() + ' まで';
         } else if (daysElapsed === 28) {
           actionText = '🚨28日経過！タイトルを変え【安値相場】で再出品';
           targetDisplay = '安値相場へ';
@@ -138,23 +138,30 @@ const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
           actionText = '再出品直後：価格ステイ（いいね待機）';
           targetDisplay = 'ステイ';
         } else {
-          // 32日目以降は、いいねに関わらず売り切り最優先のギア
-          actionText = '💀最終処分：' + gearText; 
-          targetDisplay = '【限界床】¥' + secondFloor.toLocaleString() + ' まで';
+          actionText = '💀最終処分：' + gearText;
+          targetDisplay =
+            '【限界床】¥' + cutloss.toLocaleString() + ' まで';
         }
       }
       
-      const imageFormula = imageUrl ? `=IMAGE("${imageUrl}")` : '画像なし';
-      const marketLink = marketUrl ? `=HYPERLINK("${marketUrl}", "📈相場確認")` : 'URLなし';
+      const imageFormula = imageUrl
+        ? `=IMAGE("${imageUrl}")` : '画像なし';
+      const marketLink = marketUrl
+        ? `=HYPERLINK("${marketUrl}", "📈相場確認")` : 'URLなし';
       
-      // 商品名と型番の合体
       let displayTitle = name;
       if (modelNum) {
         displayTitle = name + " / 型番:" + modelNum;
       }
-      const nameWithLink = itemUrl ? `=HYPERLINK("${itemUrl}", "${displayTitle}")` : displayTitle;
+      const nameWithLink = itemUrl
+        ? `=HYPERLINK("${itemUrl}", "${displayTitle}")`
+        : displayTitle;
       
-      actionData.push([imageFormula, nameWithLink, actionText, targetDisplay, marketLink, daysElapsed, id, sizeStatus, location, listDateStr, likes]);
+      actionData.push([
+        imageFormula, nameWithLink, actionText, targetDisplay,
+        marketLink, daysElapsed, id, sizeStatus, location,
+        listDateStr, likes
+      ]);
     }
   }
   
@@ -163,28 +170,30 @@ const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
   actionSheet.setFrozenColumns(0);
   
   if (actionData.length > 1) {
-    actionSheet.getRange(1, 1, actionData.length, actionData[0].length).setValues(actionData);
+    actionSheet.getRange(
+      1, 1, actionData.length, actionData[0].length
+    ).setValues(actionData);
     
-    // UIレイアウト（スマホ最適化済み）
     actionSheet.setRowHeights(2, actionData.length - 1, 110);
-    actionSheet.setColumnWidth(1, 100); // 画像
-    actionSheet.setColumnWidth(2, 100); // 商品名
-    actionSheet.setColumnWidth(3, 160); // アクション（ギア表示のため少し拡大）
-    actionSheet.setColumnWidth(4, 120); // 目標ストッパー
-    actionSheet.setColumnWidth(5, 70);  // 相場URL
-    actionSheet.setColumnWidth(6, 60);  // 経過日数
-    actionSheet.setColumnWidth(7, 80);  // 管理ID
-    actionSheet.setColumnWidth(8, 100); // サイズ・状態
-    actionSheet.setColumnWidth(9, 80);  // 保管場所
-    actionSheet.setColumnWidth(10, 80); // 出品日
-    actionSheet.setColumnWidth(11, 80); // ❤いいね入力（新設）
+    actionSheet.setColumnWidth(1, 100);
+    actionSheet.setColumnWidth(2, 100);
+    actionSheet.setColumnWidth(3, 160);
+    actionSheet.setColumnWidth(4, 120);
+    actionSheet.setColumnWidth(5, 70);
+    actionSheet.setColumnWidth(6, 60);
+    actionSheet.setColumnWidth(7, 80);
+    actionSheet.setColumnWidth(8, 100);
+    actionSheet.setColumnWidth(9, 80);
+    actionSheet.setColumnWidth(10, 80);
+    actionSheet.setColumnWidth(11, 80);
     
-    // いいね入力列（K列）を目立たせる背景色設定
-    actionSheet.getRange(2, 11, actionData.length - 1, 1).setBackground('#fff2cc'); 
+    actionSheet.getRange(
+      2, 11, actionData.length - 1, 1
+    ).setBackground('#fff2cc');
     
-    actionSheet.getRange(1, 1, actionData.length, actionData[0].length)
-      .setWrap(true)
-      .setVerticalAlignment('middle');
+    actionSheet.getRange(
+      1, 1, actionData.length, actionData[0].length
+    ).setWrap(true).setVerticalAlignment('middle');
       
     actionSheet.getRange(1, 1, 1, actionData[0].length)
       .setBackground('#cc0000')
@@ -195,7 +204,9 @@ const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
     actionSheet.setFrozenColumns(1);
       
   } else {
-    actionSheet.getRange('A1').setValue('現在「販売中」または「損切」の商品はありません。');
+    actionSheet.getRange('A1').setValue(
+      '現在「販売中」または「損切」の商品はありません。'
+    );
   }
 }
 
@@ -204,13 +215,64 @@ function doGet(e) {
   const token = e.parameter.token;
   const id = e.parameter.id;
   
-  // トークン認証（自分で決めた文字列に変更してください）
   if (token !== 'bluestar2026') {
     return ContentService.createTextOutput(
       JSON.stringify({ error: 'unauthorized' })
     ).setMimeType(ContentService.MimeType.JSON);
   }
-  
+
+  // 削除対象番号の問い合わせ
+  if (e.parameter.getDel) {
+    const dt = PropertiesService.getScriptProperties()
+      .getProperty('delTarget') || '';
+    return ContentService.createTextOutput(
+      JSON.stringify({ delTarget: dt })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+　
+　// 件数の問い合わせ（24時間以内なら返す）
+  if (e.parameter.getCount) {
+    const raw = PropertiesService.getScriptProperties()
+      .getProperty('countData');
+    let result = { counts: '', fresh: false };
+    if (raw) {
+      try {
+        const obj = JSON.parse(raw);
+        const ageMs = Date.now() - (obj.time || 0);
+        result = {
+          counts: obj.counts || '',
+          fresh: ageMs <= 24 * 60 * 60 * 1000  // 24時間以内か
+        };
+      } catch (err) {}
+    }
+    return ContentService.createTextOutput(
+      JSON.stringify(result)
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+　// ステータス別件数を一括集計（DBシート全体を1回で数える）
+  if (e.parameter.getStats) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const dbSheet = ss.getSheetByName('DB');
+    const statusCol = dbSheet.getRange('B:B').getValues();
+    let active = 0, store = 0, cut = 0, other = 0, total = 0;
+    for (let i = 1; i < statusCol.length; i++) {
+      const s = String(statusCol[i][0] || '').replace(/\s+/g, '');
+      if (!s) continue;          // 空行はスキップ
+      total++;                    // ステータスが入ってる行の総数
+      if (s === '販売中') active++;
+      else if (s === '保管中') store++;
+      else if (s === '損切') cut++;
+      else other++;               // 想定外のステータス（売却済など）
+    }
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        active: active, store: store, cut: cut,
+        other: other, total: total
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (!id) {
     return ContentService.createTextOutput(
       JSON.stringify({ error: 'no id' })
@@ -224,32 +286,49 @@ function doGet(e) {
   for (let i = 1; i < dbData.length; i++) {
     const row = dbData[i];
     if (String(row[0]).trim() === String(id).trim()) {
-      const cost = Number(row[7]) || 0;        // H列：仕入原価
-      const estShipping = Number(row[14]) || 0; // O列：想定送料
-      const breakEvenInDB = Number(row[12]) || 0; // M列：損益分岐
-      
-      const firstFloor = breakEvenInDB > 0
-        ? breakEvenInDB
-        : Math.ceil((cost + 500 + estShipping) / 0.9);
-      
-      const rawDeadPrice = Math.ceil((770 + 500 + estShipping) / 0.9);
-const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
-  ? Math.floor(rawDeadPrice / 100) * 100 + 180
-  : Math.floor(rawDeadPrice / 100) * 100 + 80;
-      
+      const cost = Number(row[8]) || 0;          // I列：仕入原価
+      let estShipping = Number(row[15]) || 0;  // P列：想定送料
+      if (estShipping > 0 && estShipping <= 750) estShipping = 750;  // 750円以下は750円に統一（850/1050はそのまま）
+      const breakEvenInDB = Number(row[13]) || 0; // N列：損益分岐
+
+      const rawFirstFloor = Math.ceil(
+        (cost + 500 + estShipping) / 0.9
+      );
+      const firstFloorCalc =
+        Math.floor(rawFirstFloor / 100) * 100 + 80 < rawFirstFloor
+          ? Math.floor(rawFirstFloor / 100) * 100 + 180
+          : Math.floor(rawFirstFloor / 100) * 100 + 80;
+      const firstFloor = firstFloorCalc;
+
+      const rawCutloss = Math.ceil(
+        (cost + estShipping) / 0.9
+      );
+      const cutloss =
+        Math.floor(rawCutloss / 100) * 100 + 80 < rawCutloss
+          ? Math.floor(rawCutloss / 100) * 100 + 180
+          : Math.floor(rawCutloss / 100) * 100 + 80;
+
       const result = {
         id: row[0],
         name: row[4],
-        status: String(row[1] || "").replace(/\s+/g, ""),
+        seasonAttr: String(row[5] || ''),          // F列：季節属性
+        status: String(row[1] || '').replace(/\s+/g, ''),
         cost: cost,
+        highPrice: Number(row[11]) || 0,           // L列：想定高値
+        lowPrice: Number(row[12]) || 0,            // M列：想定安値
         firstFloor: firstFloor,
-        secondFloor: secondFloor,
-        sellPrice: Number(row[13]) || 0,  // N列：売れる価格
-        lowPrice: Number(row[11]) || 0,   // L列：想定安値
-        listDate: row[9] ? String(row[9]) : '',
-        likes: row[31] === '' ? '' : Number(row[31])
+        cutloss: cutloss,
+        sellPrice: Number(row[14]) || 0,           // O列：売れる価格
+        listDate: row[10] ? String(row[10]) : '',  // K列：出品日
+        likes: row[32] === '' ? '' : Number(row[32]), // AG列
+        changedAt: row[33] ? String(row[33]) : '',  // AH列
+        relistCount: Number(row[34]) || 0,  // AI列：再出品通算回数
+        relistDate: row[35] ? String(row[35]) : '',  // AJ列：再出品起点日
+        floorDate: row[36] ? String(row[36]) : '',        // AK列：損益分岐/損切ラインのステイ開始日時
+        floorZone: row[37] ? String(row[37]) : '',        // AL列：ステイ中のゾーン('profit'|'cutloss')
+        cutlossHitCount: Number(row[38]) || 0             // AM列：損切ライン到達回数
       };
-      
+
       return ContentService.createTextOutput(
         JSON.stringify(result)
       ).setMimeType(ContentService.MimeType.JSON);
@@ -259,4 +338,96 @@ const secondFloor = Math.floor(rawDeadPrice / 100) * 100 + 80 < rawDeadPrice
   return ContentService.createTextOutput(
     JSON.stringify({ error: 'not found' })
   ).setMimeType(ContentService.MimeType.JSON);
+}
+
+// WebApp用：価格変更日時を保存 / 再出品回数を+1
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const token = data.token;
+    const id = data.id;
+    const changedAt = data.changedAt;
+    const action = data.action; // 'relist' なら回数+1
+
+    if (token !== 'bluestar2026') {
+      return ContentService.createTextOutput(
+        JSON.stringify({ error: 'unauthorized' })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const dbSheet = ss.getSheetByName('DB');
+
+    // 削除対象番号をセット（スクリプトプロパティに保存）
+    if (action === 'setDel') {
+      PropertiesService.getScriptProperties()
+        .setProperty('delTarget', String(data.id || ''));
+      return ContentService.createTextOutput(
+        JSON.stringify({ status: 'ok', delTarget: String(data.id || '') })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+　　
+// 件数を保存（出品中,保管中,再出品,損切 + 時刻）
+    if (action === 'saveCount') {
+      PropertiesService.getScriptProperties()
+        .setProperty('countData', JSON.stringify({
+          counts: String(data.counts || ''),
+          time: Date.now()
+        }));
+      return ContentService.createTextOutput(
+        JSON.stringify({ status: 'ok' })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+
+    const dbData = dbSheet.getRange('A:A').getValues();
+
+    for (let i = 1; i < dbData.length; i++) {
+      if (String(dbData[i][0]).trim() === String(id).trim()) {
+        if (action === 'relist') {
+          // AI列(35)の回数を+1。AJ列(36)の再出品起点日を今日に（K列は触らない）
+          const cur = Number(dbSheet.getRange(i + 1, 35).getValue()) || 0;
+          dbSheet.getRange(i + 1, 35).setValue(cur + 1); // AI列：回数+1
+          dbSheet.getRange(i + 1, 36).setValue(new Date()); // AJ列：再出品起点日を今日に
+          return ContentService.createTextOutput(
+            JSON.stringify({ status: 'ok', relistCount: cur + 1 })
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+        if (action === 'reachFloor') {
+          // 損益分岐 or 損切ラインに新規到達：ステイ開始日時とゾーンを記録
+          dbSheet.getRange(i + 1, 37).setValue(new Date());       // AK列：floorDate
+          dbSheet.getRange(i + 1, 38).setValue(data.zone || '');  // AL列：floorZone
+          return ContentService.createTextOutput(
+            JSON.stringify({ status: 'ok' })
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+        if (action === 'clearFloorDate') {
+          // 3日ステイ経過後のリバート実行（自動/手動）：ステイ日時をクリア。
+          // 損切ラインからのリバートだった場合はcutlossHitCountも+1する
+          dbSheet.getRange(i + 1, 37).setValue('');
+          dbSheet.getRange(i + 1, 38).setValue('');
+          if (data.zone === 'cutloss') {
+            const hitCur = Number(dbSheet.getRange(i + 1, 39).getValue()) || 0;
+            dbSheet.getRange(i + 1, 39).setValue(hitCur + 1); // AM列：cutlossHitCount+1
+          }
+          return ContentService.createTextOutput(
+            JSON.stringify({ status: 'ok' })
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+        dbSheet.getRange(i + 1, 34).setValue(changedAt); // AH列
+        return ContentService.createTextOutput(
+          JSON.stringify({ status: 'ok' })
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    return ContentService.createTextOutput(
+      JSON.stringify({ error: 'not found' })
+    ).setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ error: err.message })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
 }
