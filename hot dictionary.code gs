@@ -1,0 +1,399 @@
+/**
+ * ホット辞書（🔥ホットハイライト用）をスプレッドシートから返すGAS。
+ * 実績（DBシート）を数えて、上限価格を自動で更新するところまでやる。
+ *
+ * ■ 背景
+ *   これまで拡張機能のコードに価格の辞書が3つ埋め込まれていた。
+ *     ブランド→上限価格（537件）／型番の頭→上限価格（104件）／シリーズ→上限価格（19件）
+ *   どれも勘の数字で、実績1,024件と突き合わせると上限が3〜4.5倍ずれているものが複数あり、
+ *   当たりが1件も無いのに載っているブランドが345種あった。
+ *   ここを唯一の置き場にして、拡張機能からは読むだけにする。
+ *
+ * ■ 使い方（詳しい手順は 手順_ホット辞書.txt を見てください）
+ *   1. 収支管理スプレッドシートに「ホット辞書」タブを1枚足す
+ *   2. 貼付用_ホット辞書_確定.csv を A1 に貼る（205行）
+ *   3. このコードを【独立したApps Scriptプロジェクト】に貼る
+ *      （収支管理のスクリプトに足すと doGet が二重定義になり、価格改定が壊れる）
+ *   4. 下の SS_ID に、収支管理スプレッドシートのIDを貼る
+ *   5. デプロイ → 新しいデプロイ → ウェブアプリ
+ *        次のユーザーとして実行: 自分 ／ アクセスできるユーザー: 全員
+ *      → 出てきたURLを、仕入れ元の一覧ページ左下の 🗂 ボタンから貼る
+ *
+ * ■ シートの列
+ *   A 種別          ブランド×カテゴリ / 固有名詞 / 型番 の3つだけ
+ *                   （「ブランド」単独は書いても無視される。実測で的中率が
+ *                     40%→34%に落ちたため、拡張機能側で採用していない）
+ *   B ブランド      あなたが入れる（英語でもカタカナでもよい）
+ *   C カテゴリ      あなたが入れる
+ *   D 英語          ← GASが brand.csv から自動で入れる
+ *   E カタカナ      ← GASが brand.csv から自動で入れる
+ *   F 一致文字      型番・固有名詞の時に使う語。型番は末尾に * を付けると先頭一致
+ *   G 上限価格(手動) あなたが入れる。実績が無い間はこれを使う
+ *   H 実績件数      ← GASが自動
+ *   I 基準達成      ← GASが自動
+ *   J 実績からの上限 ← GASが自動
+ *   K 純利益中央値   ← GASが自動
+ *   L 固定          〇 を入れると実績を無視してG列を使い続ける
+ *   M 備考          ← GASが自動（辞書に無い等の注意）
+ *
+ * ■ 上限価格の決まり方
+ *   L列に〇        → G列（手動）を使う
+ *   実績が1件以上  → J列（実績から）を使う   ← 売れるほど自動で育つ
+ *   実績が無い     → G列（手動）を使う
+ *   どれも無い     → 光らせない
+ *
+ * ■ メニュー
+ *   スプレッドシートを開くと「ホット辞書」メニューが出る。
+ *     実績を数え直す … DBシートを読んでH〜M列を埋める
+ *     並べ替え       … 種別→実績件数の順に並べ直す
+ */
+
+/* ★このスクリプトは、収支管理スプレッドシートとは別の「独立したプロジェクト」に置く。
+   同じプロジェクトに置くと doGet が二重定義になり、価格改定のGASが壊れる。
+   （Apps Script はスプレッドシート1ファイルにつき1プロジェクト。doGet は1つだけ）
+   ここではIDでスプレッドシートを開くので、価格改定のコードには一切触れない。
+
+   ★SS_ID の調べ方
+     収支管理スプレッドシートを開いて、URLのこの部分をコピーする
+       https://docs.google.com/spreadsheets/d/【ここがID】/edit */
+var SS_ID = '10jI_YUoItqyCp48H9Z_lwGYHj07rtGNY8SeyP_ZPL04';
+
+var HOT_SHEET = 'ホット辞書';   // 辞書のシート名
+var DB_SHEET = 'DB';            // 実績（収支管理）のシート名。違えばここを直す
+var BRAND_CSV = 'https://raw.githubusercontent.com/myusei35-cpu/BlueStar-Standard/refs/heads/main/brand.csv';
+
+// 「本当に利益が出た」の基準（ユーザーが決めたもの）
+function _isWin(cost, net) {
+  if (cost == null || net == null) return false;
+  return cost <= 10000 ? net >= 3000 : net >= 5000;
+}
+
+/* ===================================================================== 公開 */
+function doGet(e) {
+  if (e && e.parameter && e.parameter.mode === 'rec') return _json(_recList());
+  try {
+    var sh = SpreadsheetApp.openById(SS_ID).getSheetByName(HOT_SHEET);
+    if (!sh) return _json({ error: 'シートが無い: ' + HOT_SHEET, rows: [] });
+    var v = sh.getDataRange().getValues();
+    var rows = [];
+    for (var i = 1; i < v.length; i++) {
+      var kind = _s(v[i][0]);
+      if (!kind) continue;
+      var manual = _n(v[i][6]);      // G 上限価格(手動)
+      var winN = _n(v[i][8]);        // I 基準達成
+      var fromData = _n(v[i][9]);    // J 実績からの上限
+      var fixed = _s(v[i][11]);      // L 固定
+      // 上限価格をどれにするか
+      var limit = 0;
+      if (fixed) limit = manual;
+      else if (winN > 0 && fromData > 0) limit = fromData;
+      else limit = manual;
+      if (!limit || limit <= 0) continue;   // 0 は光らせない
+      rows.push({
+        kind: kind,
+        brand: _s(v[i][1]), category: _s(v[i][2]),
+        en: _s(v[i][3]), kana: _s(v[i][4]),
+        term: _s(v[i][5]),
+        limit: limit,
+      });
+    }
+    return _json({ rows: rows, count: rows.length, at: new Date().toISOString() });
+  } catch (err) {
+    return _json({ error: String(err), rows: [] });
+  }
+}
+
+/* =============================================================== メニュー */
+/* ★独立プロジェクトなので、スプレッドシートのメニューには出ない。
+   実績を数え直したい時は、スクリプトエディタで hotRecount を選んで▶実行する。
+   （月に1回くらいで十分。売れた商品が増えるほど上限価格が実績に近づく） */
+
+/* DBシートを読んで、H〜M列（実績件数・基準達成・実績からの上限・純利益中央値・備考）を埋める。
+   ブランドは brand.csv で正し、英語・カタカナ（D・E列）も埋める。 */
+function hotRecount() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = ss.getSheetByName(HOT_SHEET);
+  var db = ss.getSheetByName(DB_SHEET);
+  if (!sh) throw new Error('シートが無い: ' + HOT_SHEET);
+  if (!db) throw new Error('シートが無い: ' + DB_SHEET + '（DB_SHEET を直してください）');
+
+  var pairs = _loadBrandCsv();
+  var items = _loadItems(db);
+  var v = sh.getDataRange().getValues();
+
+  for (var i = 1; i < v.length; i++) {
+    var kind = _s(v[i][0]);
+    if (!kind) continue;
+    var brand = _s(v[i][1]), cat = _s(v[i][2]), term = _s(v[i][5]);
+    var note = [];
+
+    // ブランドを brand.csv で正す（D・E列）
+    if (brand) {
+      var p = _findBrand(pairs, brand);
+      if (p) { v[i][3] = p.en; v[i][4] = p.kana; }
+      else { note.push('brand.csvに無い'); }
+    }
+
+    // この行に当てはまる実績を数える
+    var names = [_norm(brand), _norm(_s(v[i][3])), _norm(_s(v[i][4]))].filter(String);
+    var n = 0, win = 0, costs = [], nets = [];
+    for (var k = 0; k < items.length; k++) {
+      var it = items[k];
+      var hit = false;
+      if (kind === '型番') {
+        var t = _norm(term.replace(/\*$/, ''));
+        if (t) hit = /\*$/.test(term) ? (_norm(it.model).indexOf(t) === 0) : (_norm(it.model) === t);
+      } else if (kind === '固有名詞') {
+        hit = !!term && it.name.indexOf(term) >= 0
+          && (!names.length || _brandHit(it.name, names));
+      } else if (kind === 'ブランド×カテゴリ') {
+        hit = !!names.length && !!cat && _brandHit(it.name, names) && it.name.indexOf(cat) >= 0;
+      }
+      if (!hit) continue;
+      n++;
+      if (it.win) { win++; costs.push(it.cost); nets.push(it.net); }
+    }
+    v[i][7] = n;                                   // H 実績件数
+    v[i][8] = win;                                 // I 基準達成
+    v[i][9] = win ? _roundTo100(_pctl(costs, 0.7)) : 0;   // J 実績からの上限
+    v[i][10] = win ? _median(nets) : '';           // K 純利益中央値
+    if (!win && n) note.push('当たり0件（実績' + n + '件）');
+    if (!n) note.push('実績なし');
+    v[i][12] = note.join(' / ');                   // M 備考
+  }
+  sh.getDataRange().setValues(v);
+  Logger.log('実績を数え直しました（' + (v.length - 1) + '行）');
+}
+
+function hotSort() {
+  var sh = SpreadsheetApp.openById(SS_ID).getSheetByName(HOT_SHEET);
+  if (!sh) return;
+  var last = sh.getLastRow();
+  if (last < 3) return;
+  sh.getRange(2, 1, last - 1, sh.getLastColumn())
+    .sort([{ column: 1, ascending: true }, { column: 8, ascending: false }]);
+}
+
+/* =============================================================== 部品 */
+function _s(x) { return String(x == null ? '' : x).trim(); }
+function _n(x) {
+  var s = String(x == null ? '' : x).replace(/[^0-9.\-]/g, '');
+  var n = Number(s); return isFinite(n) ? n : 0;
+}
+function _norm(s) {
+  return String(s || '')
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+    .toLowerCase()
+    .replace(/[\s　'’`´."·・\-–—_\/\\()（）\[\]【】｜|,、]/g, '');
+}
+/* ブランドがタイトルに入っているか。
+   4文字以上は含まれていればよい。3文字以下は単語の先頭に来ている時だけ。
+   単純な部分一致にすると「リー」が ロリータ / セオリーリュクス まで拾う。 */
+function _brandHit(title, names) {
+  var hay = _norm(title);
+  for (var i = 0; i < names.length; i++) {
+    if (names[i].length >= 4 && hay.indexOf(names[i]) >= 0) return true;
+  }
+  var toks = String(title || '').split(/[\s　\/,、・()（）\[\]【】｜|×]+/);
+  for (var j = 0; j < names.length; j++) {
+    if (names[j].length >= 4 || !names[j]) continue;
+    for (var k = 0; k < toks.length; k++) {
+      if (_norm(toks[k]).indexOf(names[j]) === 0) return true;
+    }
+  }
+  return false;
+}
+function _median(a) {
+  if (!a.length) return 0;
+  var b = a.slice().sort(function (x, y) { return x - y; });
+  return b[Math.floor(b.length / 2)];
+}
+function _pctl(a, p) {
+  if (!a.length) return 0;
+  var b = a.slice().sort(function (x, y) { return x - y; });
+  return b[Math.min(b.length - 1, Math.floor(b.length * p))];
+}
+function _roundTo100(x) { return Math.round(x / 100) * 100; }
+
+function _loadBrandCsv() {
+  var txt = UrlFetchApp.fetch(BRAND_CSV).getContentText();
+  var lines = txt.split(/\r?\n/);
+  var out = [];
+  for (var i = 1; i < lines.length; i++) {
+    var c = lines[i].split(',');
+    var en = _s(c[1]), kana = _s(c[2]);
+    if (!en && !kana) continue;
+    out.push({ en: en, kana: kana, keys: [_norm(en), _norm(kana)].filter(String) });
+  }
+  return out;
+}
+function _findBrand(pairs, input) {
+  var k = _norm(input);
+  for (var i = 0; i < pairs.length; i++) {
+    if (pairs[i].keys.indexOf(k) >= 0) return pairs[i];
+  }
+  return null;
+}
+
+/* DBシートから、利益が確定している商品だけを取り出す */
+function _loadItems(db) {
+  var v = db.getDataRange().getValues();
+  var head = v[0].map(function (x) { return _s(x); });
+  var iName = head.indexOf('ブランド・商品名');
+  var iModel = head.indexOf('型番');
+  var iCost = head.indexOf('仕入原価');
+  var iNet = head.indexOf('純利益');
+  if (iName < 0 || iCost < 0 || iNet < 0) throw new Error('DBシートの列が見つかりません');
+  var out = [];
+  for (var i = 1; i < v.length; i++) {
+    var name = _s(v[i][iName]);
+    var cost = v[i][iCost] === '' ? null : _n(v[i][iCost]);
+    var net = v[i][iNet] === '' ? null : _n(v[i][iNet]);
+    if (!name || cost == null || net == null) continue;
+    out.push({
+      name: name, model: iModel >= 0 ? _s(v[i][iModel]) : '',
+      cost: cost, net: net, win: _isWin(cost, net),
+    });
+  }
+  return out;
+}
+
+function _json(o) {
+  return ContentService.createTextOutput(JSON.stringify(o))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+/* =============================================================================
+   調査記録（PCとスマホで共通に見るための置き場）
+   -----------------------------------------------------------------------------
+   ★これは「ホット辞書GAS」の【一番下に貼り足す】ものです。新しいプロジェクトは
+     作りません。同じGASにすることで、拡張機能の🗂に貼ってあるURLがそのまま使えます
+     （別プロジェクトにすると、仕入元5サイトそれぞれでURLを貼り直す必要が出ます）。
+
+   ★このコードが【絶対にしないこと】
+       行を消す・セルを消す・並べ替える・他のシートを触る
+     deleteRow / deleteSheet / clear / clearContents / sort は1つも書いていません。
+     開いて検索すれば、存在しないことを確認できます。
+     触るのは『調査記録』シートだけで、名前を直接指定しています
+     （getActiveSheet は使いません。開いていたシートに書く事故を防ぐため）。
+
+   ★30日で消す件について
+     シートからは消しません。読み出す時に日付で絞るだけです。
+     「残す」を付けた記録は日数に関係なく返します。
+
+   ★準備
+     収支管理スプレッドシートに『調査記録』という名前のタブを1枚追加してください。
+     見出し行は不要です（無ければ最初の書き込み時に自動で1行だけ作ります）。
+   ========================================================================== */
+
+var REC_SHEET = '調査記録';       // このシートだけを触る
+var REC_TTL_DAYS = 30;            // 何日ぶんを返すか（シートからは消さない）
+
+// 列の並び。増やす時は末尾に足すこと（既存の行がずれるため、間に入れない）
+//  A:商品URL B:サイト C:記録日 D:仕入値 E:状態 F:売切安値 G:売切高値
+//  H:件数 I:利益 J:型番 K:残す L:更新日時
+var REC_HEADER = ['商品URL', 'サイト', '記録日', '仕入値', '状態',
+  '売切安値', '売切高値', '件数', '利益', '型番', '残す', '更新日時'];
+
+/* 『調査記録』シートを取り出す。無ければエラーを返して何もしない。
+   ★自動で作らないのは、名前を間違えた時に気付けるようにするため。 */
+function _recSheet() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sh = ss.getSheetByName(REC_SHEET);
+  if (!sh) return null;
+  if (sh.getLastRow() === 0) {
+    sh.getRange(1, 1, 1, REC_HEADER.length).setValues([REC_HEADER]);
+  }
+  return sh;
+}
+
+/* 記録を1件書き込む（拡張機能から呼ばれる）。
+   同じ商品URLが既にあればその行を書き換え、無ければ一番下に足す。
+   ★書き換えは setValues だけ。行の削除も並べ替えもしない。 */
+function _recPut(rec) {
+  var sh = _recSheet();
+  if (!sh) return { error: REC_SHEET + ' シートがありません' };
+  var url = _s(rec.url);
+  if (!url) return { error: '商品URLがありません' };
+
+  var last = sh.getLastRow();
+  var rowIndex = 0;
+  if (last >= 2) {
+    var urls = sh.getRange(2, 1, last - 1, 1).getValues();
+    for (var i = 0; i < urls.length; i++) {
+      if (_s(urls[i][0]) === url) { rowIndex = i + 2; break; }
+    }
+  }
+  var row = [
+    url,
+    _s(rec.site),
+    _s(rec.at),                 // 記録日（拡張機能が入れた日付の文字列）
+    _n(rec.cost),
+    _s(rec.cond),
+    _n(rec.low),
+    _n(rec.high),
+    _n(rec.n),
+    _n(rec.profit),
+    _s(rec.model),
+    rec.keep ? 1 : 0,
+    new Date(),
+  ];
+  if (rowIndex) sh.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+  else sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  return { ok: true, row: rowIndex || (sh.getLastRow()) };
+}
+
+/* 記録をまとめて返す（拡張機能が一覧を開いた時に読む）。
+   ★30日より古いものは返さない。ただし「残す」が付いていれば日数に関係なく返す。
+     シートからは1行も消さない。 */
+function _recList() {
+  var sh = _recSheet();
+  if (!sh) return { error: REC_SHEET + ' シートがありません', rows: [] };
+  var last = sh.getLastRow();
+  if (last < 2) return { rows: [], count: 0 };
+  var v = sh.getRange(2, 1, last - 1, REC_HEADER.length).getValues();
+  var limit = Date.now() - (REC_TTL_DAYS * 24 * 60 * 60 * 1000);
+  var rows = [];
+  for (var i = 0; i < v.length; i++) {
+    var url = _s(v[i][0]);
+    if (!url) continue;
+    var keep = _n(v[i][10]) === 1;
+    var upd = v[i][11] ? new Date(v[i][11]).getTime() : 0;
+    if (!keep && upd && upd < limit) continue;   // 古い（消さずに返さないだけ）
+    rows.push({
+      url: url, site: _s(v[i][1]), at: _s(v[i][2]),
+      cost: _n(v[i][3]), cond: _s(v[i][4]),
+      low: _n(v[i][5]), high: _n(v[i][6]), n: _n(v[i][7]),
+      profit: _n(v[i][8]), model: _s(v[i][9]), keep: keep,
+    });
+  }
+  return { rows: rows, count: rows.length };
+}
+
+/* =====================================================================
+   拡張機能からの入口
+   -----------------------------------------------------------------
+   ★doGet は1つのプロジェクトに1つしか置けません。
+     既にある doGet（ホット辞書を返すもの）はそのままにして、
+     その中の【先頭】に次の3行を足してください。
+
+       if (e && e.parameter && e.parameter.mode === 'rec') return _json(_recList());
+
+     こうすると ?mode=rec が付いた時だけ記録を返し、それ以外は
+     今までどおり辞書を返します。辞書側の動きは1ミリも変わりません。
+   ===================================================================== */
+
+/* 書き込みの入口。doPost は今このプロジェクトに無いので、これをそのまま足せます。 */
+function doPost(e) {
+  try {
+    var body = {};
+    try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { }
+    if (body.mode !== 'rec') return _json({ error: 'mode が rec ではありません' });
+    if (!body.rec) return _json({ error: 'rec がありません' });
+    return _json(_recPut(body.rec));
+  } catch (err) {
+    return _json({ error: String(err) });
+  }
+}
+
