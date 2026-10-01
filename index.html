@@ -521,9 +521,13 @@
           div.className = 'suggestion-item';
           div.textContent = item.label;
           div.onclick = function() {
+            // ブランド・型番のどちらも、選択した候補を検索窓へ反映する
+            inputField.value = item.value;
+            toggleClearBtn(inputField.value);
+
             if (!item.isBrand) {
-              inputField.value = item.value; // 型番のみ反映
               suggestionBox.style.display = 'none';
+              return;
             }
 
             // ブランド名タップ時：同ブランドの型番一覧を表示
@@ -548,7 +552,6 @@
 
               brandModels.sort((a, b) => a.value.localeCompare(b.value));
               if (brandModels.length > 0) {
-                inputField.value = brandVal;
                 suggestionBox.innerHTML =
                   '<div style="padding:8px 16px;font-size:0.75em;' +
                   'color:#3b82f6;font-weight:700;letter-spacing:1px;">' +
@@ -567,6 +570,8 @@
                 setTimeout(() => {
                   suggestionBox.style.display = 'block';
                 }, 50);
+              } else {
+                suggestionBox.style.display = 'none';
               }
             }
           };
