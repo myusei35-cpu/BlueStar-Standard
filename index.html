@@ -180,7 +180,7 @@
   </style>
 </head>
 <body>
-  <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB<div class="app-version">v2026.10.02</div></div>
+  <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB<div class="app-version">v2026.10.02.1</div></div>
 
   <div class="container">
     <div class="alert" id="alert"></div>
@@ -223,6 +223,30 @@
   </div>
 
   <script>
+    // ======= モバイル操作の触覚フィードバック =======
+    (function setupButtonHaptics() {
+      if (!('vibrate' in navigator) || typeof navigator.vibrate !== 'function') return;
+
+      const hapticTargetSelector = [
+        'button:not(:disabled)',
+        'a[href]',
+        'select:not(:disabled)',
+        '[role="button"]',
+        '.suggestion-item',
+        '.clear-btn',
+        '.tab'
+      ].join(', ');
+
+      document.addEventListener('pointerdown', function(event) {
+        if (event.pointerType === 'mouse') return;
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const control = target.closest(hapticTargetSelector);
+        if (!control || control.disabled || control.getAttribute('aria-disabled') === 'true') return;
+        navigator.vibrate(10);
+      }, { passive: true });
+    })();
+
     function toggleClearBtn(val) {
       document.getElementById('clearBtn').style.display = val.length > 0 ? 'block' : 'none';
     }
