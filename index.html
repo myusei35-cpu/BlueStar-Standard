@@ -180,7 +180,7 @@
   </style>
 </head>
 <body>
-  <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB<div class="app-version">v2026.10.01</div></div>
+  <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB<div class="app-version">v2026.10.02</div></div>
 
   <div class="container">
     <div class="alert" id="alert"></div>
@@ -760,7 +760,7 @@
   }
   </script>
 
-  <!-- ======= 利益計算モーダル ======= -->
+  <!-- ======= stable: 利益計算モーダル ======= -->
   <style>
     #calcModal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -859,7 +859,7 @@
         <div class="cs-label">🔴 仕入れ値（必須）</div>
         <div class="cs-label" style="margin-top:4px;">仕入れ先</div>
         <select id="cSource" onchange="onSourceChange()">
-          <option value="store">店舗（トレファク・2ndST等）</option>
+          <option value="store" selected>店舗（セカスト等）</option>
           <option value="online">オンライン（メルカリ仕入れ等）</option>
         </select>
         <div class="cf" style="margin-top:8px;">
@@ -869,7 +869,7 @@
         <div id="onlineShippingRow" style="display:none;margin-top:8px;">
           <div class="cf">
             <label>仕入れ送料</label>
-            <div class="ci"><input type="number" id="cBuyShip" inputmode="numeric" placeholder="0"><span class="u">円</span></div>
+            <div class="ci"><input type="number" id="cBuyShip" inputmode="numeric" value="770" placeholder="0"><span class="u">円</span></div>
           </div>
         </div>
       </div>
@@ -927,7 +927,7 @@
           <optgroup label="── らくらくメルカリ便（ヤマト）──">
           <option value="210">ネコポス（210円）</option>
           <option value="450">宅急便コンパクト（450円）</option>
-          <option value="750">宅急便 60サイズ（750円）</option>
+          <option value="750" selected>宅急便 60サイズ（750円）</option>
           <option value="850">宅急便 80サイズ（850円）</option>
           <option value="1050">宅急便 100サイズ（1,050円）</option>
           <option value="1200">宅急便 120サイズ（1,200円）</option>
@@ -962,7 +962,7 @@
         <div class="cs-label">🔵 外注費（任意）</div>
         <select id="cOutsource" onchange="onOutsourceChange()">
           <option value="0">なし（0円）</option>
-          <option value="400">400円</option>
+          <option value="400" selected>400円</option>
           <option value="500">500円</option>
           <option value="custom">自由入力</option>
         </select>
@@ -1577,10 +1577,11 @@
       var el = document.getElementById(id); if(el) el.value = '';
     });
     document.getElementById('cSource').value    = 'store';
+    document.getElementById('cBuyShip').value   = '770';
     document.getElementById('onlineShippingRow').style.display = 'none';
     document.getElementById('cFeeSelect').value  = '10';
-    document.getElementById('cSellShip').value   = '0';
-    document.getElementById('cOutsource').value  = '0';
+    document.getElementById('cSellShip').value   = '750';
+    document.getElementById('cOutsource').value  = '400';
     document.getElementById('chkSeasonal').checked = false;
     document.getElementById('chkInstant').checked  = false;
     document.getElementById('sellShipCustomRow').style.display  = 'none';
