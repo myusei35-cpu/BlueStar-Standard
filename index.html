@@ -180,7 +180,7 @@
   </style>
 </head>
 <body>
-  <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB<div class="app-version">v2026.10.02.1</div></div>
+  <div class="header"><span class="star">★</span>BLUESTAR RESEARCH HUB<div class="app-version">v2026.10.02.2</div></div>
 
   <div class="container">
     <div class="alert" id="alert"></div>
@@ -329,7 +329,8 @@
           url: `https://auctions.yahoo.co.jp/search/search?p=${encKey}&tab_ex=commerce&ei=utf-8`
         },
         {
-          name: 'メルカリ：販売中',
+          name: 'メルカリ調査',
+          mersearch: true,
           desc: 'ライバル確認',
           img: 'https://myusei35-cpu.github.io/BlueStar-Standard/mercari.jpg', 
           url: `https://jp.mercari.com/search?keyword=${encKey}&status=on_sale&seller_type=0&item_types=mercari&sort=created_time&order=desc`
@@ -347,7 +348,11 @@
         let btn;
         const idx = sites.indexOf(site);
         window['__siteUrl_' + idx] = site.url;
-        if (site.quetta) {
+        if (site.mersearch) {
+          btn = `<button class="open-btn" 
+            onclick="openMercariResearch(${idx})"
+            >開く ➔</button>`;
+        } else if (site.quetta) {
           btn = `<button class="open-btn" 
             onclick="openQuetta(${idx})"
             >開く ➔</button>`;
@@ -659,7 +664,28 @@
     a.click();
     document.body.removeChild(a);
   }
-    function openQuetta_inv() {
+    function openMercariResearch(idx) {
+    var url = window['__siteUrl_' + idx];
+    if (!url) return;
+
+    // Androidのメルカリ調査アプリが未インストールなら、同じ絞り込みのWeb検索へ戻す。
+    if (!/Android/i.test(navigator.userAgent)) {
+      window.open(url, '_blank');
+      return;
+    }
+
+    var targetPath = url.replace(/^https?:\/\//, '');
+    var intentUrl = 'intent://' + targetPath +
+      '#Intent;scheme=https;package=blue.star.mersearch.app;' +
+      'S.browser_fallback_url=' + encodeURIComponent(url) + ';end;';
+    var a = document.createElement('a');
+    a.href = intentUrl;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function openQuetta_inv() {
     var url = 'https://myusei35-cpu.github.io/BlueStar-Standard/inventory.html';
     var targetPath = url.replace(/^https?:\/\//, '');
     var intentUrl = 'intent://' + targetPath +
